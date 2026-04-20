@@ -11,7 +11,7 @@ Aplicação de cálculo de IMC (Índice de Massa Corporal) construída com boas 
 | # | Etapa | Status |
 |---|-------|--------|
 | 1 | Backend NestJS com Swagger, OpenTelemetry e Prometheus | ✅ Concluído |
-| 2 | Frontend Vue.js | 🔲 Pendente |
+| 2 | Frontend Vue.js | ✅ Concluído |
 | 3 | Testes (backend + frontend) | 🔲 Pendente |
 | 4 | AppSec (Trivy, OWASP ZAP, Dependency Check, DefectDojo) | 🔲 Pendente |
 
@@ -119,6 +119,59 @@ npm run start:prod
 cd backend
 docker build -t appsec-bmi-backend .
 docker run -p 3000:3000 -p 9464:9464 appsec-bmi-backend
+```
+
+---
+
+## Etapa 2 — Frontend
+
+### Stack
+
+- **Framework:** Vue.js 3 (Composition API)
+- **Build tool:** Vite
+- **Linguagem:** TypeScript
+- **HTTP client:** Axios
+- **Roteamento:** Vue Router
+- **Testes:** Vitest
+
+### Estrutura
+
+```
+frontend/
+├── src/
+│   ├── components/
+│   │   ├── BmiForm.vue        # Formulário de entrada (peso + altura)
+│   │   └── BmiResult.vue      # Exibição do resultado com cor por classificação
+│   ├── composables/
+│   │   └── useBmi.ts          # Estado reativo + chamada à API
+│   ├── services/
+│   │   └── bmi.service.ts     # Axios client para POST /bmi/calculate
+│   ├── types/
+│   │   └── bmi.types.ts       # Interfaces TypeScript (BmiRequest, BmiResult)
+│   ├── views/
+│   │   └── HomeView.vue       # Página principal orquestrando os componentes
+│   ├── router/index.ts
+│   └── main.ts
+├── Dockerfile                 # Multi-stage: Vite build + Nginx
+├── nginx.conf                 # SPA fallback + proxy para /api/
+├── .env                       # VITE_API_URL=http://localhost:3000
+└── .env.production            # VITE_API_URL=http://backend:3000
+```
+
+### Executar localmente
+
+```bash
+cd frontend
+npm run dev        # http://localhost:5173
+npm run build      # build de produção
+```
+
+### Docker
+
+```bash
+cd frontend
+docker build -t appsec-bmi-frontend .
+docker run -p 80:80 appsec-bmi-frontend
 ```
 
 ---
