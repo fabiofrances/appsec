@@ -384,29 +384,88 @@ for i, (fname, desc) in enumerate([
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Slide 9 — AppSec Overview
+# Slide 9 — AppSec Overview (SAST + SCA + Container + DAST → DefectDojo)
 # ═══════════════════════════════════════════════════════════════════════════════
 s9 = slide()
 header(s9, "Etapa 4 — AppSec", "Ferramentas de segurança integradas ao pipeline", RED)
 
-for i, (icon, name, type_, desc, color) in enumerate([
-    ("🐳", "Trivy",       "Container Scan", "CVEs nas imagens Docker\nappsec-bmi-backend/frontend", BLUE),
-    ("📦", "Dep. Check",  "SCA",            "Vulnerabilidades em\ndependências npm (NVD)", ORANGE),
-    ("⚡", "OWASP ZAP",  "DAST",           "Vulnerabilidades HTTP\nem runtime (full scan)", RED),
-    ("🟣", "DefectDojo",  "Aggregator",     "Centraliza, prioriza e\ngerencia todos os findings", PURPLE),
-]):
-    x = 0.35 + i * 3.25
-    box(s9, x, 1.45, 3.05, 5.4, BG2)
+scan_tools = [
+    ("🔍", "SonarQube",  "SAST",           "Análise estática\ndo código fonte",            RGBColor(0xCB, 0x6E, 0x17)),
+    ("📦", "Dep. Check", "SCA",            "Dependências\nvulneráveis (NVD)",              ORANGE),
+    ("🐳", "Trivy",      "Container Scan", "CVEs nas\nimagens Docker",                     BLUE),
+    ("⚡", "OWASP ZAP", "DAST",           "Vulnerabilidades\nHTTP em runtime",             RED),
+]
+for i, (icon, name, type_, desc, color) in enumerate(scan_tools):
+    x = 0.3 + i * 3.22
+    box(s9, x, 1.45, 3.05, 4.1, BG2)
     box(s9, x, 1.45, 3.05, 0.06, color)
-    txt(s9, icon,  x, 1.55, 3.05, 1.2,  size=52, align=PP_ALIGN.CENTER)
-    txt(s9, name,  x, 2.75, 3.05, 0.55, size=20, bold=True, align=PP_ALIGN.CENTER)
-    pill(s9, type_, x + 0.55, 3.38, color, size=12)
-    txt(s9, desc,  x + 0.1, 3.9, 2.85, 1.5, size=13, color=LGRAY,
-        align=PP_ALIGN.CENTER)
-
+    txt(s9, icon,  x,        1.55, 3.05, 1.05, size=46, align=PP_ALIGN.CENTER)
+    txt(s9, name,  x,        2.6,  3.05, 0.52, size=18, bold=True, align=PP_ALIGN.CENTER)
+    pill(s9, type_, x + 0.45, 3.2, color, size=11)
+    txt(s9, desc,  x + 0.1,  3.72, 2.85, 1.0, size=12, color=LGRAY, align=PP_ALIGN.CENTER)
     if i < 3:
-        txt(s9, "→", x + 3.0, 3.9, 0.3, 0.45, size=20, color=LGRAY,
-            align=PP_ALIGN.CENTER)
+        txt(s9, "→", x + 3.0, 3.0, 0.25, 0.42, size=18, color=LGRAY, align=PP_ALIGN.CENTER)
+
+# Arrows pointing down to DefectDojo
+for i in range(4):
+    x = 0.3 + i * 3.22 + 1.3
+    txt(s9, "↓", x, 5.6, 0.45, 0.45, size=18, color=LGRAY, align=PP_ALIGN.CENTER)
+
+# DefectDojo as aggregator below
+box(s9, 3.4, 6.1, 6.5, 1.0, RGBColor(0x33, 0x00, 0x66))
+box(s9, 3.4, 6.1, 6.5, 0.06, PURPLE)
+txt(s9, "🟣  DefectDojo — Aggregator", 3.4, 6.18, 6.5, 0.5,
+    size=17, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
+txt(s9, "Centraliza, prioriza e gerencia todos os findings", 3.4, 6.62, 6.5, 0.38,
+    size=12, color=LGRAY, align=PP_ALIGN.CENTER)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Slide 10 — SonarQube (SAST)
+# ═══════════════════════════════════════════════════════════════════════════════
+s10 = slide()
+header(s10, "SonarQube — SAST",
+       "Static Application Security Testing — análise do código fonte", RGBColor(0xCB, 0x6E, 0x17))
+
+SONAR = RGBColor(0xCB, 0x6E, 0x17)
+
+box(s10, 0.4, 1.35, 5.8, 5.8, BG2)
+txt(s10, "🔍  O que analisa?", 0.65, 1.45, 5.3, 0.5, size=18, bold=True, color=SONAR)
+
+for i, item in enumerate([
+    "🐛  Bugs e code smells no código fonte",
+    "💉  Vulnerabilidades de segurança (OWASP)",
+    "🔑  Hardcoded secrets e credenciais",
+    "📊  Cobertura de testes (integra Jest/Vitest)",
+    "🔁  Código duplicado e complexidade",
+    "📋  Violações de boas práticas",
+]):
+    txt(s10, item, 0.65, 2.1 + i * 0.65, 5.3, 0.55, size=14, color=WHITE)
+
+# Quality Gate
+box(s10, 6.5, 1.35, 6.5, 3.2, BG2)
+txt(s10, "🚦  Quality Gate", 6.75, 1.45, 6.0, 0.5, size=18, bold=True, color=SONAR)
+txt(s10, "Bloqueia o merge/deploy se os critérios\nde qualidade e segurança não forem atingidos:",
+    6.75, 2.0, 6.1, 0.75, size=13, color=LGRAY)
+for i, (item, color) in enumerate([
+    ("0 vulnerabilidades novas (blocker/critical)", RED),
+    ("Cobertura de testes >= 80%",                  GREEN),
+    ("0 bugs e code smells críticos novos",          ORANGE),
+    ("Duplicacao < 3%",                             LGRAY),
+]):
+    txt(s10, f"  • {item}", 6.75, 2.82 + i * 0.44, 6.1, 0.38, size=13, color=color)
+
+# Pipeline position
+box(s10, 6.5, 4.75, 6.5, 2.4, BG2)
+txt(s10, "🔄  Onde entra no pipeline?", 6.75, 4.85, 6.0, 0.5, size=16, bold=True, color=WHITE)
+for i, (num, step, color) in enumerate([
+    ("1", "Developer faz push para o repositório",     WHITE),
+    ("2", "GitHub Actions executa sonar-scanner",      WHITE),
+    ("3", "SonarQube analisa e calcula Quality Gate",  WHITE),
+    ("4", "PASS = merge liberado / FAIL = bloqueado",  GREEN),
+]):
+    pill(s10, num, 6.65, 5.42 + i * 0.46, DGRAY, size=11)
+    txt(s10, step, 7.15, 5.42 + i * 0.46, 5.6, 0.38, size=13, color=color)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
