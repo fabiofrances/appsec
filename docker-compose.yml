@@ -86,7 +86,7 @@ services:
   defectdojo:
     image: defectdojo/defectdojo-django:2.57.2
     ports:
-      - "8080:8080"
+      - "8081:8081"
     environment:
       - DD_ALLOWED_HOSTS=*
       - DD_DATABASE_URL=postgresql://defectdojo:defectdojo@postgres:5432/defectdojo
