@@ -17,6 +17,66 @@ Aplicação de cálculo de IMC (Índice de Massa Corporal) construída com boas 
 
 ---
 
+## Arquitetura e Comunicação dos Serviços
+
+```mermaid
+graph TB
+    subgraph User["Usuário"]
+        Browser["Browser"]
+    end
+
+    subgraph FE["Frontend :80"]
+        NGINX["nginx"]
+        VUE["Vue.js SPA"]
+    end
+
+    subgraph BE["Backend"]
+        NESTJS["NestJS :3000"]
+        METRICS["metrics :9464"]
+    end
+
+    subgraph OBS["Observabilidade"]
+        JAEGER["Jaeger :16686"]
+        PROMETHEUS["Prometheus :9090"]
+    end
+
+    subgraph DOJO["DefectDojo :8081"]
+        DD_NGINX["nginx"]
+        UWSGI["uWSGI / Django"]
+        WORKER["Celery Worker"]
+        BEAT["Celery Beat"]
+        REDIS["Redis"]
+        PG["PostgreSQL"]
+    end
+
+    subgraph SCANS["AppSec Scans"]
+        TRIVY["Trivy\nContainer Scan"]
+        DEPCHECK["Dep. Check\nSCA"]
+        ZAP["OWASP ZAP\nDAST"]
+    end
+
+    Browser --> NGINX
+    NGINX -->|"/api/ proxy"| NESTJS
+    NGINX -->|"/otel/ proxy"| JAEGER
+    VUE -.->|"OTel HTTP traces"| NGINX
+    NESTJS -->|"OTel gRPC :4317"| JAEGER
+    PROMETHEUS -->|"scrape :9464"| METRICS
+
+    TRIVY -->|"scan imagens Docker"| REPORTS[("reports/")]
+    DEPCHECK -->|"scan src/ node_modules"| REPORTS
+    ZAP -->|"HTTP full scan :80"| NGINX
+    ZAP --> REPORTS
+    REPORTS -->|"import JSON"| DD_NGINX
+
+    DD_NGINX --> UWSGI
+    UWSGI --> PG
+    UWSGI --> REDIS
+    WORKER --> REDIS
+    BEAT --> REDIS
+```
+
+---
+
 ## Etapa 1 — Backend
 
 ### Stack

@@ -2,7 +2,7 @@
 # Creates a Product and retrieves the API token for CI/CD integration.
 # Usage: DOJO_URL=http://localhost:8080 sh setup.sh
 
-DOJO_URL="${DOJO_URL:-http://localhost:8080}"
+DOJO_URL="${DOJO_URL:-http://localhost:8081}"
 ADMIN_USER="admin"
 ADMIN_PASS="admin@dojo123"
 

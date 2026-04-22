@@ -18,6 +18,11 @@ echo " OWASP Dependency Check - SCA"
 echo "========================================"
 echo ""
 
+NVD_ARGS=()
+if [[ -n "${NVD_API_KEY:-}" ]]; then
+  NVD_ARGS=(--nvdApiKey "$NVD_API_KEY")
+fi
+
 docker run --rm \
   -v "$ROOT_DIR:/src:ro" \
   -v "$REPORTS_DIR:/reports" \
@@ -29,7 +34,7 @@ docker run --rm \
   --format JSON \
   --format HTML \
   --out /reports \
-  --nvdApiKey "${NVD_API_KEY:-}" \
+  "${NVD_ARGS[@]}" \
   --enableRetired
 
 echo ""
