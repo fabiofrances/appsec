@@ -83,10 +83,9 @@ services:
     networks:
       - appsec
 
-  defectdojo:
+  # named 'uwsgi' so defectdojo-nginx resolves the upstream correctly
+  uwsgi:
     image: defectdojo/defectdojo-django:2.57.2
-    ports:
-      - "8081:8081"
     environment:
       - DD_ALLOWED_HOSTS=*
       - DD_DATABASE_URL=postgresql://defectdojo:defectdojo@postgres:5432/defectdojo
@@ -94,6 +93,15 @@ services:
       - DD_SECRET_KEY=OF5fG1JmCFlFA1yoIKKwX5HZwVKV1arP
     depends_on:
       - defectdojo-initializer
+    networks:
+      - appsec
+
+  defectdojo-nginx:
+    image: defectdojo/defectdojo-nginx:2.57.2
+    ports:
+      - "8081:8080"
+    depends_on:
+      - uwsgi
     networks:
       - appsec
 
