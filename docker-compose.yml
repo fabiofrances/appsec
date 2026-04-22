@@ -3,6 +3,7 @@ services:
     build:
       context: ./backend
       target: production
+    image: appsec-bmi-backend:latest
     ports:
       - "3000:3000"
       - "9464:9464"
@@ -19,6 +20,7 @@ services:
     build:
       context: ./frontend
       target: production
+    image: appsec-bmi-frontend:latest
     ports:
       - "80:80"
     depends_on:

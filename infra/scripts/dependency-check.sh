@@ -1,0 +1,64 @@
+#!/bin/bash
+# OWASP Dependency Check - SCA scan on backend and frontend dependencies
+# Usage: bash infra/scripts/dependency-check.sh [--import-dojo]
+
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+REPORTS_DIR="$ROOT_DIR/reports"
+DOJO_URL="${DOJO_URL:-http://localhost:8081}"
+DOJO_TOKEN="${DOJO_TOKEN:-}"
+DOJO_PRODUCT_ID="${DOJO_PRODUCT_ID:-}"
+IMPORT_DOJO="${1:-}"
+
+mkdir -p "$REPORTS_DIR"
+
+echo "========================================"
+echo " OWASP Dependency Check - SCA"
+echo "========================================"
+echo ""
+
+docker run --rm \
+  -v "$ROOT_DIR:/src:ro" \
+  -v "$REPORTS_DIR:/reports" \
+  -v odc-data:/usr/share/dependency-check/data \
+  owasp/dependency-check:latest \
+  --scan /src/backend \
+  --scan /src/frontend \
+  --project "bmi-appsec" \
+  --format JSON \
+  --format HTML \
+  --out /reports \
+  --nvdApiKey "${NVD_API_KEY:-}" \
+  --enableRetired
+
+echo ""
+REPORT="$REPORTS_DIR/dependency-check-report.json"
+
+VULNS=$(python3 -c "
+import json
+data = json.load(open('$REPORT'))
+deps = data.get('dependencies', [])
+vuln_count = sum(len(d.get('vulnerabilities', [])) for d in deps)
+print(vuln_count)
+" 2>/dev/null || echo "?")
+
+echo "✔ Report: $REPORT"
+echo "✔ HTML:   $REPORTS_DIR/dependency-check-report.html"
+echo "✔ Vulnerabilities found: $VULNS"
+
+if [[ "$IMPORT_DOJO" == "--import-dojo" && -n "$DOJO_TOKEN" ]]; then
+  echo ""
+  echo "→ Importing to DefectDojo..."
+  curl -s -X POST "$DOJO_URL/api/v2/import-scan/" \
+    -H "Authorization: Token $DOJO_TOKEN" \
+    -F "scan_type=Dependency Check Scan" \
+    -F "product_id=$DOJO_PRODUCT_ID" \
+    -F "engagement_name=Local Scan - $(date +%Y-%m-%d)" \
+    -F "file=@$REPORT" \
+    -F "active=true" \
+    -F "verified=false" | python3 -c "import json,sys; d=json.load(sys.stdin); print('✔ Imported, test id:', d.get('test'))" 2>/dev/null || echo "✗ Import failed"
+fi
+
+echo ""
+echo "✔ Dependency Check complete."
