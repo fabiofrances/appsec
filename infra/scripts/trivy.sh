@@ -23,12 +23,9 @@ for SERVICE in backend frontend; do
   echo ""
   echo "▶ Scanning image: $IMAGE"
 
-  docker run --rm \
-    -v /var/run/docker.sock:/var/run/docker.sock \
-    -v "$REPORTS_DIR:/reports" \
-    aquasec/trivy:latest image \
+  trivy image \
     --format json \
-    --output "/reports/trivy-${SERVICE}.json" \
+    --output "$REPORT" \
     --severity CRITICAL,HIGH,MEDIUM \
     "$IMAGE"
 
