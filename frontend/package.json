@@ -15,6 +15,13 @@
     "lint:eslint": "eslint . --fix --cache"
   },
   "dependencies": {
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.215.0",
+    "@opentelemetry/instrumentation": "^0.215.0",
+    "@opentelemetry/instrumentation-fetch": "^0.215.0",
+    "@opentelemetry/resources": "^2.7.0",
+    "@opentelemetry/sdk-trace-web": "^2.7.0",
+    "@opentelemetry/semantic-conventions": "^1.40.0",
     "axios": "^1.15.1",
     "vue": "^3.5.32",
     "vue-router": "^5.0.4"
