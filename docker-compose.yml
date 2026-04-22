@@ -1,0 +1,67 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      target: production
+    ports:
+      - "3000:3000"
+      - "9464:9464"
+    environment:
+      - NODE_ENV=production
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
+    depends_on:
+      - jaeger
+    networks:
+      - appsec
+
+  frontend:
+    build:
+      context: ./frontend
+      target: production
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - appsec
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.62
+    ports:
+      - "16686:16686"
+      - "4318:4318"
+    networks:
+      - appsec
+
+  prometheus:
+    image: prom/prometheus:v3.2.1
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - backend
+    networks:
+      - appsec
+
+  defectdojo:
+    image: defectdojo/defectdojo-django:2.43.0
+    ports:
+      - "8080:8080"
+    environment:
+      - DD_ALLOWED_HOSTS=*
+      - DD_ADMIN_USER=admin
+      - DD_ADMIN_PASSWORD=admin@dojo123
+      - DD_DATABASE_URL=sqlite:////app/db/defectdojo.db
+      - DD_SECRET_KEY=OF5fG1JmCFlFA1yoIKKwX5HZwVKV1arP
+    volumes:
+      - defectdojo_data:/app/db
+    networks:
+      - appsec
+
+networks:
+  appsec:
+    driver: bridge
+
+volumes:
+  defectdojo_data:

@@ -12,8 +12,8 @@ Aplicação de cálculo de IMC (Índice de Massa Corporal) construída com boas 
 |---|-------|--------|
 | 1 | Backend NestJS com Swagger, OpenTelemetry e Prometheus | ✅ Concluído |
 | 2 | Frontend Vue.js | ✅ Concluído |
-| 3 | Testes (backend + frontend) | 🔲 Pendente |
-| 4 | AppSec (Trivy, OWASP ZAP, Dependency Check, DefectDojo) | 🔲 Pendente |
+| 3 | Testes (backend + frontend) | ✅ Concluído |
+| 4 | AppSec (Trivy, OWASP ZAP, Dependency Check, DefectDojo) | ✅ Concluído |
 
 ---
 
@@ -173,6 +173,115 @@ cd frontend
 docker build -t appsec-bmi-frontend .
 docker run -p 80:80 appsec-bmi-frontend
 ```
+
+---
+
+---
+
+## Etapa 3 — Testes
+
+### Backend (Jest)
+
+| Suíte | Testes | Cobertura |
+|-------|--------|-----------|
+| `bmi.service.spec.ts` | 9 (todas as 7 classificações + valor + campos) | Lógica de negócio |
+| `bmi.controller.spec.ts` | 3 (definição, resultado, delegação) | Camada de controle |
+| `app.e2e-spec.ts` | 6 (POST /bmi/calculate: sucesso + 4 erros de validação; GET /health) | Integração |
+
+```bash
+cd backend
+npm test              # unit tests
+npm run test:e2e      # e2e tests
+npm run test:cov      # coverage report
+```
+
+### Frontend (Vitest)
+
+| Suíte | Testes |
+|-------|--------|
+| `BmiForm.spec.ts` | Renderização e envio do formulário |
+| `BmiResult.spec.ts` | Exibição, cores por classificação, evento reset |
+| `bmi.service.spec.ts` | Chamada à API via Axios |
+| `useBmi.spec.ts` | Composable: estados loading/error/result |
+
+```bash
+cd frontend
+npm run test:unit     # run once
+npm run test:unit -- --watch  # watch mode
+```
+
+---
+
+## Etapa 4 — AppSec
+
+### Arquitetura de Segurança
+
+```
+                    ┌─────────────┐
+                    │  GitHub CI  │
+                    └──────┬──────┘
+           ┌───────────────┼───────────────┐
+           ▼               ▼               ▼
+    ┌──────────────┐ ┌──────────┐ ┌──────────────┐
+    │  Dep. Check  │ │  Trivy   │ │  OWASP ZAP   │
+    │    (SCA)     │ │(Container│ │   (DAST)     │
+    │              │ │  Scan)   │ │              │
+    └──────┬───────┘ └────┬─────┘ └──────┬───────┘
+           └──────────────┼──────────────┘
+                          ▼
+                   ┌────────────┐
+                   │ DefectDojo │
+                   │(Aggregator)│
+                   └────────────┘
+```
+
+### Ferramentas
+
+| Ferramenta | Tipo | O que analisa |
+|-----------|------|---------------|
+| **OWASP Dependency Check** | SCA | Vulnerabilidades em dependências npm |
+| **Trivy** | Container Scan | CVEs nas imagens Docker |
+| **OWASP ZAP** | DAST | Vulnerabilidades em runtime (HTTP) |
+| **DefectDojo** | Aggregator | Centraliza e prioriza todos os findings |
+
+### Subir o ambiente completo
+
+```bash
+# Na raiz do projeto
+docker compose up -d
+
+# Serviços disponíveis:
+# http://localhost       → Frontend (Vue.js)
+# http://localhost:3000  → Backend (NestJS)
+# http://localhost:3000/api/docs → Swagger UI
+# http://localhost:9464/metrics  → Prometheus metrics
+# http://localhost:9090  → Prometheus
+# http://localhost:16686 → Jaeger UI
+# http://localhost:8080  → DefectDojo (admin / admin@dojo123)
+```
+
+### Configurar DefectDojo para o CI/CD
+
+```bash
+# Após subir o DefectDojo localmente:
+sh infra/defectdojo/setup.sh
+
+# O script imprime os 3 secrets a configurar no GitHub:
+# DEFECTDOJO_URL, DEFECTDOJO_TOKEN, DEFECTDOJO_PRODUCT_ID
+```
+
+### Pipeline GitHub Actions (`.github/workflows/appsec.yml`)
+
+O pipeline roda automaticamente em push/PR para `main`:
+
+1. **Tests** — backend (Jest) + frontend (Vitest)
+2. **Dependency Check** — analisa `package-lock.json` de backend e frontend
+3. **Trivy** — escaneia as imagens `bmi-backend:ci` e `bmi-frontend:ci`
+4. **ZAP** — sobe o stack via Docker Compose e faz DAST na aplicação rodando
+
+Todos os relatórios são:
+- Salvos como artefatos no GitHub Actions
+- Importados automaticamente no DefectDojo (quando secrets configurados)
 
 ---
 

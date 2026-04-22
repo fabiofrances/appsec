@@ -1,0 +1,32 @@
+---
+env:
+  contexts:
+    - name: bmi-app
+      urls:
+        - http://frontend
+  parameters:
+    failOnError: true
+    progressToStdout: true
+
+jobs:
+  - type: spider
+    parameters:
+      context: bmi-app
+      maxDuration: 2
+
+  - type: passiveScan-wait
+    parameters:
+      maxDuration: 5
+
+  - type: activeScan
+    parameters:
+      context: bmi-app
+      maxDuration: 5
+
+  - type: report
+    parameters:
+      reportDir: /zap/reports
+      reportFile: zap-report
+      reportTitle: "OWASP ZAP - BMI App DAST Report"
+      reportDescription: "Automated DAST scan for the AppSec lecture BMI calculator"
+      template: traditional-json
