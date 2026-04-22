@@ -18,10 +18,17 @@ echo " OWASP Dependency Check - SCA"
 echo "========================================"
 echo ""
 
-NVD_ARGS=()
-if [[ -n "${NVD_API_KEY:-}" ]]; then
-  NVD_ARGS=(--nvdApiKey "$NVD_API_KEY")
-fi
+echo "▶ Instalando dependências npm para scan completo..."
+for dir in backend frontend; do
+  if [[ ! -d "$ROOT_DIR/$dir/node_modules" ]]; then
+    echo "  → npm install em $dir..."
+    (cd "$ROOT_DIR/$dir" && npm install --prefer-offline --silent 2>/dev/null || npm install --silent)
+  fi
+done
+
+EXTRA_ARGS=()
+[[ -n "${NVD_API_KEY:-}" ]] && EXTRA_ARGS+=(--nvdApiKey "$NVD_API_KEY")
+[[ "${SKIP_UPDATE:-}" == "1" ]] && EXTRA_ARGS+=(--noupdate)
 
 docker run --rm \
   -v "$ROOT_DIR:/src:ro" \
@@ -34,7 +41,7 @@ docker run --rm \
   --format JSON \
   --format HTML \
   --out /reports \
-  "${NVD_ARGS[@]}" \
+  "${EXTRA_ARGS[@]}" \
   --enableRetired
 
 echo ""
