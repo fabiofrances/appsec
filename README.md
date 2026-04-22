@@ -11,7 +11,7 @@ Aplicação de cálculo de IMC (Índice de Massa Corporal) construída com boas 
 | # | Etapa | Status |
 |---|-------|--------|
 | 1 | Backend NestJS com Swagger, OpenTelemetry e Prometheus | ✅ Concluído |
-| 2 | Frontend Vue.js | ✅ Concluído |
+| 2 | Frontend Vue.js com OpenTelemetry Web | ✅ Concluído |
 | 3 | Testes (backend + frontend) | ✅ Concluído |
 | 4 | AppSec (Trivy, OWASP ZAP, Dependency Check, DefectDojo) | ✅ Concluído |
 
@@ -25,7 +25,7 @@ Aplicação de cálculo de IMC (Índice de Massa Corporal) construída com boas 
 - **Framework:** NestJS 11
 - **Documentação:** Swagger (`@nestjs/swagger`)
 - **Validação:** `class-validator` + `class-transformer`
-- **Observabilidade:** OpenTelemetry SDK + Prometheus (`prom-client`)
+- **Observabilidade:** OpenTelemetry SDK (traces via OTLP → Jaeger) + Prometheus (`prom-client`)
 - **Health check:** `@nestjs/terminus`
 
 ### Estrutura
@@ -58,7 +58,7 @@ backend/
 | `POST` | `/bmi/calculate` | Calcula o IMC |
 | `GET` | `/health` | Health check da aplicação |
 | `GET` | `/api/docs` | Swagger UI |
-| `GET` | `:9464/metrics` | Métricas Prometheus |
+| `GET` | `:9464/metrics` | Métricas Prometheus (porta separada) |
 
 ### Exemplo de uso
 
@@ -104,21 +104,8 @@ POST /bmi/calculate
 
 ```bash
 cd backend
-
-# Desenvolvimento (hot reload)
-npm run start:dev
-
-# Produção
-npm run build
-npm run start:prod
-```
-
-### Docker
-
-```bash
-cd backend
-docker build -t appsec-bmi-backend .
-docker run -p 3000:3000 -p 9464:9464 appsec-bmi-backend
+npm run start:dev   # desenvolvimento com hot reload
+npm run build && npm run start:prod
 ```
 
 ---
@@ -133,6 +120,7 @@ docker run -p 3000:3000 -p 9464:9464 appsec-bmi-backend
 - **HTTP client:** Axios
 - **Roteamento:** Vue Router
 - **Testes:** Vitest
+- **Observabilidade:** OpenTelemetry Web SDK (traces → Jaeger via proxy nginx)
 
 ### Estrutura
 
@@ -150,13 +138,22 @@ frontend/
 │   │   └── bmi.types.ts       # Interfaces TypeScript (BmiRequest, BmiResult)
 │   ├── views/
 │   │   └── HomeView.vue       # Página principal orquestrando os componentes
+│   ├── telemetry.ts           # Bootstrap OpenTelemetry Web SDK
 │   ├── router/index.ts
 │   └── main.ts
 ├── Dockerfile                 # Multi-stage: Vite build + Nginx
-├── nginx.conf                 # SPA fallback + proxy para /api/
+├── nginx.conf                 # SPA fallback + proxy /api/ + proxy /otel/
 ├── .env                       # VITE_API_URL=http://localhost:3000
-└── .env.production            # VITE_API_URL=http://backend:3000
+└── .env.production            # VITE_API_URL=/api
 ```
+
+### Proxy nginx
+
+| Rota nginx | Destino | Finalidade |
+|-----------|---------|------------|
+| `/` | arquivos estáticos | SPA Vue.js |
+| `/api/` | `http://backend:3000/` | Chamadas à API |
+| `/otel/` | `http://jaeger:4318/` | Traces do browser → Jaeger |
 
 ### Executar localmente
 
@@ -166,27 +163,17 @@ npm run dev        # http://localhost:5173
 npm run build      # build de produção
 ```
 
-### Docker
-
-```bash
-cd frontend
-docker build -t appsec-bmi-frontend .
-docker run -p 80:80 appsec-bmi-frontend
-```
-
----
-
 ---
 
 ## Etapa 3 — Testes
 
 ### Backend (Jest)
 
-| Suíte | Testes | Cobertura |
-|-------|--------|-----------|
-| `bmi.service.spec.ts` | 9 (todas as 7 classificações + valor + campos) | Lógica de negócio |
-| `bmi.controller.spec.ts` | 3 (definição, resultado, delegação) | Camada de controle |
-| `app.e2e-spec.ts` | 6 (POST /bmi/calculate: sucesso + 4 erros de validação; GET /health) | Integração |
+| Suíte | Testes | O que cobre |
+|-------|--------|-------------|
+| `bmi.service.spec.ts` | 9 | Todas as 7 classificações + valor BMI + campos retornados |
+| `bmi.controller.spec.ts` | 3 | Definição, resultado correto, delegação ao service |
+| `app.e2e-spec.ts` | 6 | POST /bmi/calculate (sucesso + 4 validações); GET /health |
 
 ```bash
 cd backend
@@ -206,89 +193,146 @@ npm run test:cov      # coverage report
 
 ```bash
 cd frontend
-npm run test:unit     # run once
-npm run test:unit -- --watch  # watch mode
+npm run test:unit           # executa uma vez
+npm run test:unit -- --watch  # modo watch
 ```
 
 ---
 
 ## Etapa 4 — AppSec
 
-### Arquitetura de Segurança
+### Arquitetura
 
 ```
-                    ┌─────────────┐
-                    │  GitHub CI  │
-                    └──────┬──────┘
-           ┌───────────────┼───────────────┐
-           ▼               ▼               ▼
-    ┌──────────────┐ ┌──────────┐ ┌──────────────┐
-    │  Dep. Check  │ │  Trivy   │ │  OWASP ZAP   │
-    │    (SCA)     │ │(Container│ │   (DAST)     │
-    │              │ │  Scan)   │ │              │
-    └──────┬───────┘ └────┬─────┘ └──────┬───────┘
-           └──────────────┼──────────────┘
-                          ▼
-                   ┌────────────┐
-                   │ DefectDojo │
-                   │(Aggregator)│
-                   └────────────┘
+                    ┌─────────────────┐
+                    │   GitHub CI /   │
+                    │   Execução local│
+                    └────────┬────────┘
+           ┌─────────────────┼─────────────────┐
+           ▼                 ▼                 ▼
+   ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+   │    Trivy     │  │  Dep. Check  │  │  OWASP ZAP   │
+   │  Container   │  │     SCA      │  │     DAST     │
+   │    Scan      │  │              │  │              │
+   └──────┬───────┘  └──────┬───────┘  └──────┬───────┘
+          └─────────────────┼─────────────────┘
+                            ▼
+                    ┌───────────────┐
+                    │  DefectDojo   │
+                    │  (Aggregator) │
+                    └───────────────┘
 ```
 
 ### Ferramentas
 
 | Ferramenta | Tipo | O que analisa |
 |-----------|------|---------------|
-| **OWASP Dependency Check** | SCA | Vulnerabilidades em dependências npm |
-| **Trivy** | Container Scan | CVEs nas imagens Docker |
-| **OWASP ZAP** | DAST | Vulnerabilidades em runtime (HTTP) |
-| **DefectDojo** | Aggregator | Centraliza e prioriza todos os findings |
+| **Trivy** | Container Scan | CVEs nas imagens Docker `appsec-bmi-backend` e `appsec-bmi-frontend` |
+| **OWASP Dependency Check** | SCA | Vulnerabilidades em dependências npm (backend + frontend) |
+| **OWASP ZAP** | DAST | Vulnerabilidades HTTP em runtime (full scan) |
+| **DefectDojo** | Aggregator | Centraliza, prioriza e gerencia todos os findings |
 
-### Subir o ambiente completo
+### Stack completa
 
-```bash
-# Na raiz do projeto
+```
 docker compose up -d
-
-# Serviços disponíveis:
-# http://localhost       → Frontend (Vue.js)
-# http://localhost:3000  → Backend (NestJS)
-# http://localhost:3000/api/docs → Swagger UI
-# http://localhost:9464/metrics  → Prometheus metrics
-# http://localhost:9090  → Prometheus
-# http://localhost:16686 → Jaeger UI
-# http://localhost:8080  → DefectDojo (admin / admin@dojo123)
 ```
 
-### Configurar DefectDojo para o CI/CD
+| Serviço | URL | Credenciais |
+|---------|-----|-------------|
+| Frontend | http://localhost | — |
+| Backend | http://localhost:3000 | — |
+| Swagger UI | http://localhost:3000/api/docs | — |
+| Prometheus metrics | http://localhost:9464/metrics | — |
+| Prometheus | http://localhost:9090 | — |
+| Jaeger UI | http://localhost:16686 | — |
+| DefectDojo | http://localhost:8081 | admin / admin@dojo123 |
+
+### Serviços DefectDojo
+
+O DefectDojo utiliza uma stack completa para funcionar corretamente:
+
+| Container | Função |
+|-----------|--------|
+| `postgres` | Banco de dados PostgreSQL |
+| `redis` | Broker de tarefas Celery |
+| `defectdojo-initializer` | Executa migrations e cria admin (roda uma vez) |
+| `uwsgi` | Aplicação Django via uWSGI |
+| `defectdojo-nginx` | Serve assets estáticos + proxy para uWSGI |
+| `defectdojo-celeryworker` | Processa tarefas em background (imports) |
+| `defectdojo-celerybeat` | Agendamento de tarefas periódicas |
+
+### Executar os scans
 
 ```bash
-# Após subir o DefectDojo localmente:
-sh infra/defectdojo/setup.sh
+# Build das imagens com nomes fixos (necessário para o Trivy)
+docker compose build backend frontend
 
-# O script imprime os 3 secrets a configurar no GitHub:
-# DEFECTDOJO_URL, DEFECTDOJO_TOKEN, DEFECTDOJO_PRODUCT_ID
+# Scans individuais
+make trivy          # escaneia imagens Docker
+make dep-check      # analisa dependências npm
+make zap            # DAST contra http://localhost
+
+# Todos de uma vez
+make scan-all
 ```
 
-### Pipeline GitHub Actions (`.github/workflows/appsec.yml`)
+Os relatórios são gerados em `reports/` (JSON + HTML).
 
-O pipeline roda automaticamente em push/PR para `main`:
+### Importar findings no DefectDojo
 
-1. **Tests** — backend (Jest) + frontend (Vitest)
-2. **Dependency Check** — analisa `package-lock.json` de backend e frontend
-3. **Trivy** — escaneia as imagens `bmi-backend:ci` e `bmi-frontend:ci`
-4. **ZAP** — sobe o stack via Docker Compose e faz DAST na aplicação rodando
+```bash
+# Passo 1: obter token e product ID
+make setup-dojo
 
-Todos os relatórios são:
-- Salvos como artefatos no GitHub Actions
-- Importados automaticamente no DefectDojo (quando secrets configurados)
+# Passo 2: exportar as variáveis
+export DOJO_TOKEN=<token>
+export DOJO_PRODUCT_ID=<id>
+
+# Passo 3: rodar os scans e importar automaticamente
+make scan-all-dojo
+```
+
+### Pipeline GitHub Actions
+
+O arquivo `.github/workflows/appsec.yml` executa automaticamente em push/PR para `main`:
+
+| Job | Ferramenta | Ação |
+|-----|-----------|------|
+| `test` | Jest + Vitest | Valida que nenhum teste quebrou |
+| `dependency-check` | OWASP Dep. Check | SCA das dependências npm |
+| `trivy` | Trivy | Scan das imagens backend e frontend |
+| `zap` | OWASP ZAP | DAST contra o stack completo |
+
+Todos os relatórios são salvos como artefatos no GitHub Actions e importados no DefectDojo quando os secrets `DEFECTDOJO_URL`, `DEFECTDOJO_TOKEN` e `DEFECTDOJO_PRODUCT_ID` estiverem configurados.
+
+---
+
+## Observabilidade
+
+### Traces distribuídos (Jaeger v2)
+
+O projeto instrumenta **backend e frontend** com OpenTelemetry, correlacionando spans entre camadas:
+
+- **`bmi-backend`** — traces das requisições HTTP via auto-instrumentação NestJS
+- **`bmi-frontend`** — traces das chamadas fetch/axios via `FetchInstrumentation`
+
+O frontend envia traces para `/otel/v1/traces` (mesmo origin), o nginx faz proxy para `http://jaeger:4318/v1/traces` evitando CORS.
+
+### Métricas (Prometheus)
+
+O backend expõe métricas na porta `:9464` (porta separada — boa prática cloud-native para não expor métricas publicamente). O Prometheus faz scrape a cada 15s.
 
 ---
 
 ## Princípios Aplicados
 
-- **SOLID:** cada classe tem responsabilidade única (Service, Controller, DTO separados)
-- **MVC:** Controller → Service → DTO
-- **Validação na borda:** `ValidationPipe` global com `whitelist: true`
-- **Observabilidade:** traces via OTLP, métricas via Prometheus
-- **Segurança no container:** imagem `node:22-alpine`, usuário `node` (não-root), multi-stage build
+| Princípio | Como foi aplicado |
+|-----------|------------------|
+| **SOLID** | Cada classe tem responsabilidade única (Service, Controller, DTO separados) |
+| **MVC** | Controller → Service → DTO |
+| **Validação na borda** | `ValidationPipe` global com `whitelist: true` e `transform: true` |
+| **Container seguro** | Imagem `node:22-alpine`, usuário `node` (não-root), multi-stage build |
+| **Métricas em porta separada** | `:9464` não exposta publicamente, apenas para o Prometheus interno |
+| **Observabilidade distribuída** | Traces correlacionados entre frontend e backend via W3C TraceContext |
+| **Segurança contínua** | Scans automáticos (SCA, container, DAST) em cada push via GitHub Actions |
