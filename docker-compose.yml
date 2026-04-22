@@ -26,7 +26,7 @@ services:
       - appsec
 
   jaeger:
-    image: jaegertracing/all-in-one:1.62
+    image: jaegertracing/all-in-one:latest
     ports:
       - "16686:16686"
       - "4318:4318"
@@ -34,7 +34,7 @@ services:
       - appsec
 
   prometheus:
-    image: prom/prometheus:v3.2.1
+    image: prom/prometheus:latest
     ports:
       - "9090:9090"
     volumes:
@@ -45,7 +45,7 @@ services:
       - appsec
 
   defectdojo:
-    image: defectdojo/defectdojo-django:2.43.0
+    image: defectdojo/defectdojo-django:latest
     ports:
       - "8080:8080"
     environment:
