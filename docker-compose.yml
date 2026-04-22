@@ -48,7 +48,7 @@ services:
       - appsec
 
   defectdojo:
-    image: defectdojo/defectdojo-django:latest
+    image: defectdojo/defectdojo-django:2.57.2
     ports:
       - "8080:8080"
     environment:
