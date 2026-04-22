@@ -26,7 +26,10 @@ services:
       - appsec
 
   jaeger:
-    image: jaegertracing/all-in-one:latest
+    image: jaegertracing/jaeger:2.6.0
+    command: ["--config=/config/jaeger.yml"]
+    volumes:
+      - ./infra/jaeger/config.yml:/config/jaeger.yml:ro
     ports:
       - "16686:16686"
       - "4318:4318"
@@ -34,7 +37,7 @@ services:
       - appsec
 
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v3.3.0
     ports:
       - "9090:9090"
     volumes:
