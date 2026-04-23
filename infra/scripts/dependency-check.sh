@@ -18,13 +18,14 @@ echo " OWASP Dependency Check - SCA"
 echo "========================================"
 echo ""
 
-echo "▶ Instalando dependências npm para scan completo..."
-for dir in backend frontend; do
-  if [[ ! -d "$ROOT_DIR/$dir/node_modules" ]]; then
-    echo "  → npm install em $dir..."
-    (cd "$ROOT_DIR/$dir" && npm install --prefer-offline --silent 2>/dev/null || npm install --silent)
-  fi
-done
+# Descomente abaixo para instalar node_modules automaticamente antes do scan
+# echo "▶ Instalando dependências npm para scan completo..."
+# for dir in backend frontend; do
+#   if [[ ! -d "$ROOT_DIR/$dir/node_modules" ]]; then
+#     echo "  → npm install em $dir..."
+#     (cd "$ROOT_DIR/$dir" && npm install --prefer-offline --silent 2>/dev/null || npm install --silent)
+#   fi
+# done
 
 EXTRA_ARGS=()
 [[ -n "${NVD_API_KEY:-}" ]] && EXTRA_ARGS+=(--nvdApiKey "$NVD_API_KEY")
