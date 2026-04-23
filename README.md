@@ -357,6 +357,11 @@ Os relatórios são gerados em `reports/` (JSON + HTML).
 
 ### Importar findings no DefectDojo
 
+> **Pré-requisito:** aguarde o DefectDojo inicializar completamente antes de rodar o setup.
+> O container `defectdojo-initializer` precisa concluir a migração do banco. Verifique com
+> `docker compose logs -f defectdojo-initializer` e aguarde a mensagem de conclusão,
+> ou acesse http://localhost:8081 — quando a tela de login aparecer, está pronto.
+
 ```bash
 # Passo 1: criar produto e engagements no DefectDojo
 make setup-dojo
