@@ -29,7 +29,7 @@ describe('BMI API (e2e)', () => {
         .expect(201)
         .expect((res) => {
           expect(res.body.bmi).toBe(22.86);
-          expect(res.body.classification).toBe('Normal weight');
+          expect(res.body.classification).toBe('Peso normal');
           expect(res.body.weight).toBe(70);
           expect(res.body.height).toBe(1.75);
         });

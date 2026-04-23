@@ -33,12 +33,12 @@ export class BmiService {
   }
 
   private classify(bmi: number): string {
-    if (bmi < 16) return 'Severe underweight';
-    if (bmi < 18.5) return 'Underweight';
-    if (bmi < 25) return 'Normal weight';
-    if (bmi < 30) return 'Overweight';
-    if (bmi < 35) return 'Obesity class I';
-    if (bmi < 40) return 'Obesity class II';
-    return 'Obesity class III';
+    if (bmi < 16) return 'Magreza grave';
+    if (bmi < 18.5) return 'Abaixo do peso';
+    if (bmi < 25) return 'Peso normal';
+    if (bmi < 30) return 'Sobrepeso';
+    if (bmi < 35) return 'Obesidade grau I';
+    if (bmi < 40) return 'Obesidade grau II';
+    return 'Obesidade grau III';
   }
 }
