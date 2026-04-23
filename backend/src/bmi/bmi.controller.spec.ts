@@ -31,7 +31,7 @@ describe('BmiController', () => {
       const result = controller.calculate(dto);
 
       expect(result.bmi).toBe(22.86);
-      expect(result.classification).toBe('Normal weight');
+      expect(result.classification).toBe('Peso normal');
     });
 
     it('should delegate calculation to BmiService', () => {
