@@ -358,12 +358,24 @@ Os relatórios são gerados em `reports/` (JSON + HTML).
 ### Importar findings no DefectDojo
 
 ```bash
-# Passo 1: obter token e product ID
+# Passo 1: criar produto e engagements no DefectDojo
 make setup-dojo
+```
 
-# Passo 2: exportar as variáveis
+O script cria automaticamente o produto **BMI AppSec** e três engagements dedicados:
+
+| Engagement | Ferramenta | Tipo |
+|-----------|-----------|------|
+| `Container Scan - Trivy` | Trivy | CI/CD |
+| `SCA - Dependency Check` | OWASP Dep. Check | CI/CD |
+| `DAST - OWASP ZAP` | OWASP ZAP | CI/CD |
+
+```bash
+# Passo 2: exportar as variáveis exibidas pelo setup
 export DOJO_TOKEN=<token>
-export DOJO_PRODUCT_ID=<id>
+export DOJO_ENG_TRIVY=<id>
+export DOJO_ENG_DEPCHECK=<id>
+export DOJO_ENG_ZAP=<id>
 
 # Passo 3: rodar os scans e importar automaticamente
 make scan-all-dojo
@@ -380,7 +392,7 @@ O arquivo `.github/workflows/appsec.yml` executa automaticamente em push/PR para
 | `trivy` | Trivy | Scan das imagens backend e frontend |
 | `zap` | OWASP ZAP | DAST contra o stack completo |
 
-Todos os relatórios são salvos como artefatos no GitHub Actions e importados no DefectDojo quando os secrets `DEFECTDOJO_URL`, `DEFECTDOJO_TOKEN` e `DEFECTDOJO_PRODUCT_ID` estiverem configurados.
+Todos os relatórios são salvos como artefatos no GitHub Actions e importados no DefectDojo quando os secrets `DEFECTDOJO_URL`, `DEFECTDOJO_TOKEN`, `DEFECTDOJO_ENG_TRIVY`, `DEFECTDOJO_ENG_DEPCHECK` e `DEFECTDOJO_ENG_ZAP` estiverem configurados.
 
 ---
 
