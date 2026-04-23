@@ -42,6 +42,7 @@ docker run --rm \
   --project "bmi-appsec" \
   --format JSON \
   --format HTML \
+  --format XML \
   --out /reports \
   "${EXTRA_ARGS[@]}" \
   --enableRetired
@@ -57,8 +58,9 @@ vuln_count = sum(len(d.get('vulnerabilities', [])) for d in deps)
 print(vuln_count)
 " 2>/dev/null || echo "?")
 
-echo "✔ Report: $REPORT"
-echo "✔ HTML:   $REPORTS_DIR/dependency-check-report.html"
+echo "✔ Report JSON: $REPORT"
+echo "✔ Report XML:  $REPORTS_DIR/dependency-check-report.xml"
+echo "✔ Report HTML: $REPORTS_DIR/dependency-check-report.html"
 echo "✔ Vulnerabilities found: $VULNS"
 
 if [[ "$IMPORT_DOJO" == "--import-dojo" && -n "$DOJO_TOKEN" ]]; then
@@ -68,7 +70,7 @@ if [[ "$IMPORT_DOJO" == "--import-dojo" && -n "$DOJO_TOKEN" ]]; then
     -H "Authorization: Token $DOJO_TOKEN" \
     -F "scan_type=Dependency Check Scan" \
     -F "engagement=$DOJO_ENG_DEPCHECK" \
-    -F "file=@$REPORT" \
+    -F "file=@$REPORTS_DIR/dependency-check-report.xml" \
     -F "active=true" \
     -F "verified=false" | python3 -c "import json,sys; d=json.load(sys.stdin); print('✔ Imported, test id:', d.get('test'))" 2>/dev/null || echo "✗ Import failed"
 fi
