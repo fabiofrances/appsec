@@ -11,37 +11,37 @@ const makeResult = (bmi: number, classification: string) => ({
 
 describe('BmiResult', () => {
   it('should display BMI value', () => {
-    const wrapper = mount(BmiResult, { props: { result: makeResult(22.86, 'Normal weight') } })
+    const wrapper = mount(BmiResult, { props: { result: makeResult(22.86, 'Peso normal') } })
     expect(wrapper.find('.bmi-value').text()).toBe('22.86')
   })
 
   it('should display classification', () => {
-    const wrapper = mount(BmiResult, { props: { result: makeResult(22.86, 'Normal weight') } })
-    expect(wrapper.find('.classification').text()).toBe('Normal weight')
+    const wrapper = mount(BmiResult, { props: { result: makeResult(22.86, 'Peso normal') } })
+    expect(wrapper.find('.classification').text()).toBe('Peso normal')
   })
 
   it('should apply green class for normal weight', () => {
-    const wrapper = mount(BmiResult, { props: { result: makeResult(22.86, 'Normal weight') } })
+    const wrapper = mount(BmiResult, { props: { result: makeResult(22.86, 'Peso normal') } })
     expect(wrapper.find('.result').classes()).toContain('green')
   })
 
   it('should apply blue class for underweight', () => {
-    const wrapper = mount(BmiResult, { props: { result: makeResult(17, 'Underweight') } })
+    const wrapper = mount(BmiResult, { props: { result: makeResult(17, 'Abaixo do peso') } })
     expect(wrapper.find('.result').classes()).toContain('blue')
   })
 
   it('should apply yellow class for overweight', () => {
-    const wrapper = mount(BmiResult, { props: { result: makeResult(27, 'Overweight') } })
+    const wrapper = mount(BmiResult, { props: { result: makeResult(27, 'Sobrepeso') } })
     expect(wrapper.find('.result').classes()).toContain('yellow')
   })
 
   it('should apply red class for obesity', () => {
-    const wrapper = mount(BmiResult, { props: { result: makeResult(35, 'Obesity class II') } })
+    const wrapper = mount(BmiResult, { props: { result: makeResult(35, 'Obesidade grau II') } })
     expect(wrapper.find('.result').classes()).toContain('red')
   })
 
   it('should emit reset when button is clicked', async () => {
-    const wrapper = mount(BmiResult, { props: { result: makeResult(22.86, 'Normal weight') } })
+    const wrapper = mount(BmiResult, { props: { result: makeResult(22.86, 'Peso normal') } })
     await wrapper.find('.reset-btn').trigger('click')
     expect(wrapper.emitted('reset')).toBeTruthy()
   })

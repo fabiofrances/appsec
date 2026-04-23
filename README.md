@@ -161,13 +161,13 @@ POST /bmi/calculate
 
 | IMC | Classificação |
 |-----|---------------|
-| < 16 | Severe underweight |
-| 16 – 18.4 | Underweight |
-| 18.5 – 24.9 | Normal weight |
-| 25 – 29.9 | Overweight |
-| 30 – 34.9 | Obesity class I |
-| 35 – 39.9 | Obesity class II |
-| ≥ 40 | Obesity class III |
+| < 16 | Magreza grave |
+| 16 – 18.4 | Abaixo do peso |
+| 18.5 – 24.9 | Peso normal |
+| 25 – 29.9 | Sobrepeso |
+| 30 – 34.9 | Obesidade grau I |
+| 35 – 39.9 | Obesidade grau II |
+| ≥ 40 | Obesidade grau III |
 
 ### Métricas Prometheus
 

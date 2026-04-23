@@ -83,7 +83,7 @@ def card(s, x, y, w, h, color, title, body_lines, icon=""):
 
 def pill(s, text, x, y, bg_color, fg=WHITE, size=12):
     w = max(len(text) * 0.115 + 0.35, 1.0)
-    b = box(s, x, y, w, 0.33, bg_color)
+    box(s, x, y, w, 0.33, bg_color)
     t = s.shapes.add_textbox(Inches(x), Inches(y), Inches(w), Inches(0.33))
     tf = t.text_frame
     p = tf.paragraphs[0]
@@ -290,13 +290,13 @@ s6 = slide()
 header(s6, "Classificações de IMC (OMS)", "Lógica de negócio do BmiService", BLUE)
 
 for i, (bmi_range, label, color) in enumerate([
-    ("< 16",        "Severe Underweight", RGBColor(0x8B, 0x00, 0x00)),
-    ("16 – 18.4",   "Underweight",        RED),
-    ("18.5 – 24.9", "Normal weight",      GREEN),
-    ("25 – 29.9",   "Overweight",         ORANGE),
-    ("30 – 34.9",   "Obesity Class I",    RGBColor(0xFF, 0x66, 0x00)),
-    ("35 – 39.9",   "Obesity Class II",   RGBColor(0xCC, 0x33, 0x00)),
-    ("≥ 40",        "Obesity Class III",  RGBColor(0x99, 0x00, 0x00)),
+    ("< 16",        "Magreza grave",    RGBColor(0x8B, 0x00, 0x00)),
+    ("16 – 18.4",   "Abaixo do peso",   RED),
+    ("18.5 – 24.9", "Peso normal",      GREEN),
+    ("25 – 29.9",   "Sobrepeso",        ORANGE),
+    ("30 – 34.9",   "Obesidade grau I", RGBColor(0xFF, 0x66, 0x00)),
+    ("35 – 39.9",   "Obesidade grau II",RGBColor(0xCC, 0x33, 0x00)),
+    ("≥ 40",        "Obesidade grau III",RGBColor(0x99, 0x00, 0x00)),
 ]):
     y = 1.38 + i * 0.84
     box(s6, 0.4, y, 0.32, 0.74, color)

@@ -4,7 +4,7 @@ import * as bmiService from '@/services/bmi.service'
 
 vi.mock('@/services/bmi.service')
 
-const mockResult = { bmi: 22.86, classification: 'Normal weight', weight: 70, height: 1.75 }
+const mockResult = { bmi: 22.86, classification: 'Peso normal', weight: 70, height: 1.75 }
 
 describe('useBmi', () => {
   beforeEach(() => {
