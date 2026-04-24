@@ -386,6 +386,56 @@ export DOJO_ENG_ZAP=<id>
 make scan-all-dojo
 ```
 
+#### Opção: gerar relatórios agora e importar depois via curl
+
+Caso prefira gerar os relatórios em um momento e importar em outro (ex: ambiente sem acesso ao DefectDojo durante o scan):
+
+```bash
+# Gerar apenas os relatórios (sem --import-dojo)
+make trivy
+make dep-check
+make zap
+# Os arquivos ficam em reports/
+```
+
+Depois, com o DefectDojo acessível, importe cada relatório individualmente:
+
+```bash
+# Trivy — backend
+curl -s -X POST http://localhost:8081/api/v2/import-scan/ \
+  -H "Authorization: Token $DOJO_TOKEN" \
+  -F "scan_type=Trivy Scan" \
+  -F "engagement=$DOJO_ENG_TRIVY" \
+  -F "file=@reports/trivy-backend.json" \
+  -F "active=true" -F "verified=false"
+
+# Trivy — frontend
+curl -s -X POST http://localhost:8081/api/v2/import-scan/ \
+  -H "Authorization: Token $DOJO_TOKEN" \
+  -F "scan_type=Trivy Scan" \
+  -F "engagement=$DOJO_ENG_TRIVY" \
+  -F "file=@reports/trivy-frontend.json" \
+  -F "active=true" -F "verified=false"
+
+# OWASP Dependency Check (requer XML)
+curl -s -X POST http://localhost:8081/api/v2/import-scan/ \
+  -H "Authorization: Token $DOJO_TOKEN" \
+  -F "scan_type=Dependency Check Scan" \
+  -F "engagement=$DOJO_ENG_DEPCHECK" \
+  -F "file=@reports/dependency-check-report.xml" \
+  -F "active=true" -F "verified=false"
+
+# OWASP ZAP (requer XML)
+curl -s -X POST http://localhost:8081/api/v2/import-scan/ \
+  -H "Authorization: Token $DOJO_TOKEN" \
+  -F "scan_type=ZAP Scan" \
+  -F "engagement=$DOJO_ENG_ZAP" \
+  -F "file=@reports/zap-report.xml" \
+  -F "active=true" -F "verified=false"
+```
+
+> **Formato dos arquivos:** Trivy aceita JSON; Dependency Check e ZAP exigem XML.
+
 ### Pipeline GitHub Actions
 
 O arquivo `.github/workflows/appsec.yml` executa automaticamente em push/PR para `main`:
