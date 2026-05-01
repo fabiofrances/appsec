@@ -36,7 +36,7 @@ docker run --rm \
   -v "$ROOT_DIR:/src:ro" \
   -v "$REPORTS_DIR:/reports" \
   -v odc-data:/usr/share/dependency-check/data \
-  owasp/dependency-check:latest \
+  owasp/dependency-check:11.1.1 \
   --scan /src/backend \
   --scan /src/frontend \
   --project "bmi-appsec" \
