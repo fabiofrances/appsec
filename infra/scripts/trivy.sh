@@ -20,6 +20,7 @@ echo "========================================"
 for SERVICE in backend frontend; do
   IMAGE="appsec-bmi-${SERVICE}:latest"
   REPORT="$REPORTS_DIR/trivy-${SERVICE}.json"
+  REPORT_HTML="$REPORTS_DIR/trivy-${SERVICE}.html"
 
   echo ""
   echo "▶ Scanning image: $IMAGE"
@@ -30,6 +31,13 @@ for SERVICE in backend frontend; do
     --severity CRITICAL,HIGH,MEDIUM \
     "$IMAGE"
 
+  trivy image \
+    --format template \
+    --template "@contrib/html.tpl" \
+    --output "$REPORT_HTML" \
+    --severity CRITICAL,HIGH,MEDIUM \
+    "$IMAGE"
+
   VULNS=$(python3 -c "
 import json, sys
 data = json.load(open('$REPORT'))
@@ -37,7 +45,9 @@ total = sum(len(r.get('Vulnerabilities') or []) for r in data.get('Results', [])
 print(total)
 " 2>/dev/null || echo "?")
 
-  echo "   ✔ Report: $REPORT  |  Vulnerabilities found: $VULNS"
+  echo "   ✔ JSON: $REPORT"
+  echo "   ✔ HTML: $REPORT_HTML"
+  echo "   ✔ Vulnerabilities found: $VULNS"
 
   if [[ "$IMPORT_DOJO" == "--import-dojo" && -n "$DOJO_TOKEN" ]]; then
     echo "   → Importing to DefectDojo..."
