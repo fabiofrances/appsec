@@ -5,6 +5,7 @@
 set -euo pipefail
 
 REPORTS_DIR="$(cd "$(dirname "$0")/../../reports" && pwd)"
+HTML_TPL="$(cd "$(dirname "$0")/../trivy" && pwd)/html.tpl"
 DOJO_URL="${DOJO_URL:-http://localhost:8081}"
 DOJO_TOKEN="${DOJO_TOKEN:-}"
 DOJO_PRODUCT_NAME="${DOJO_PRODUCT_NAME:-BMI AppSec}"
@@ -33,7 +34,7 @@ for SERVICE in backend frontend; do
 
   trivy image \
     --format template \
-    --template "@contrib/html.tpl" \
+    --template "@$HTML_TPL" \
     --output "$REPORT_HTML" \
     --severity CRITICAL,HIGH,MEDIUM \
     "$IMAGE"
