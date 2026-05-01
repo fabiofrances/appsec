@@ -33,6 +33,44 @@ Aplicação de cálculo de IMC (Índice de Massa Corporal) construída com boas 
 
 ---
 
+## Referência de Comandos (Makefile)
+
+### Stack
+
+| Comando | Descrição |
+|---------|-----------|
+| `make up` | Sobe todos os containers em background (`docker compose up -d`) |
+| `make down` | Para e remove todos os containers |
+| `make build` | Reconstrói as imagens `backend` e `frontend` sem cache |
+
+### AppSec — somente relatório
+
+| Comando | Ferramenta | Saída em `reports/` |
+|---------|-----------|---------------------|
+| `make trivy` | Trivy | `trivy-backend.json/html`, `trivy-frontend.json/html` |
+| `make dep-check` | OWASP Dependency Check | `dependency-check-report.json/html/xml` |
+| `make zap` | OWASP ZAP | `zap-report.json/html/xml` |
+| `make scan-all` | Todos | Executa trivy → dep-check → zap |
+
+### AppSec — relatório + import no DefectDojo
+
+> Requer `DOJO_TOKEN`, `DOJO_ENG_TRIVY`, `DOJO_ENG_DEPCHECK` e `DOJO_ENG_ZAP` exportados.
+
+| Comando | Descrição |
+|---------|-----------|
+| `make trivy-dojo` | Trivy + importa no DefectDojo |
+| `make dep-check-dojo` | Dependency Check + importa no DefectDojo |
+| `make zap-dojo` | OWASP ZAP + importa no DefectDojo |
+| `make scan-all-dojo` | Executa e importa os três scans |
+
+### DefectDojo
+
+| Comando | Descrição |
+|---------|-----------|
+| `make setup-dojo` | Cria produto e engagements no DefectDojo, exibe as variáveis de ambiente necessárias |
+
+---
+
 ## Arquitetura e Comunicação dos Serviços
 
 ```mermaid
