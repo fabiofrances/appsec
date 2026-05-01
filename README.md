@@ -344,16 +344,22 @@ O DefectDojo utiliza uma stack completa para funcionar corretamente:
 # Build das imagens com nomes fixos (necessário para o Trivy)
 docker compose build backend frontend
 
-# Scans individuais
-make trivy          # escaneia imagens Docker
-make dep-check      # analisa dependências npm
-make zap            # DAST contra http://localhost
+# Scans individuais — somente relatório
+make trivy          # escaneia imagens Docker      → trivy-backend.json/html + trivy-frontend.json/html
+make dep-check      # analisa dependências npm     → dependency-check-report.json/html/xml
+make zap            # DAST contra http://localhost → zap-report.json/html/xml
+
+# Scans individuais — relatório + import no DefectDojo
+make trivy-dojo
+make dep-check-dojo
+make zap-dojo
 
 # Todos de uma vez
-make scan-all
+make scan-all        # gera todos os relatórios
+make scan-all-dojo   # gera e importa no DefectDojo
 ```
 
-Os relatórios são gerados em `reports/` (JSON + HTML).
+Os relatórios são gerados em `reports/`. Trivy gera JSON (import) e HTML (visualização); Dependency Check e ZAP geram JSON, HTML e XML (o XML é exigido pelo DefectDojo).
 
 ### Importar findings no DefectDojo
 
@@ -383,7 +389,12 @@ export DOJO_ENG_DEPCHECK=<id>
 export DOJO_ENG_ZAP=<id>
 
 # Passo 3: rodar os scans e importar automaticamente
-make scan-all-dojo
+make scan-all-dojo   # todos de uma vez
+
+# ou individualmente
+make trivy-dojo
+make dep-check-dojo
+make zap-dojo
 ```
 
 #### Opção: gerar relatórios agora e importar depois via curl
