@@ -1,0 +1,21 @@
+# syntax=docker/dockerfile:1
+# Lab 03 — Base "chainguard": cgr.dev/chainguard/node (Wolfi, glibc, rebuild diário, ~0 CVEs)
+# Build: docker build -f hands-on/lab03-base-images/Dockerfile.chainguard -t handson/backend:chainguard backend
+#
+# No tier gratuito só a tag :latest é pública → em produção, fixe por digest (@sha256:...).
+# ENTRYPOINT é /usr/bin/node e o usuário padrão é nonroot (uid 65532); sem shell.
+FROM node:22 AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build && npm prune --omit=dev
+
+FROM cgr.dev/chainguard/node:latest AS production
+WORKDIR /app
+ENV NODE_ENV=production
+COPY package.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
+EXPOSE 3000 9464
+CMD ["dist/main.js"]

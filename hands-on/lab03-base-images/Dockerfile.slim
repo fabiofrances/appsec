@@ -1,0 +1,19 @@
+# syntax=docker/dockerfile:1
+# Lab 03 — Base "slim": node:22-slim (Debian mínimo, glibc, com shell e apt)
+# Build: docker build -f hands-on/lab03-base-images/Dockerfile.slim -t handson/backend:slim backend
+FROM node:22 AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build && npm prune --omit=dev
+
+FROM node:22-slim AS production
+WORKDIR /app
+ENV NODE_ENV=production
+COPY package.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
+USER node
+EXPOSE 3000 9464
+CMD ["node", "dist/main.js"]

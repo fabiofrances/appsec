@@ -1,0 +1,45 @@
+# Lab 04 — Hardening do runtime
+# Pré-requisito: make lab-multi lab-hardening-build (ou simplesmente: make lab-hardening)
+# Uso: docker compose -f hands-on/lab04-hardening/compose.hardening.yml up -d
+name: handson-hardening
+
+x-hardening: &hardening
+  read_only: true                 # rootfs somente leitura
+  cap_drop: [ALL]                 # nenhuma capability do kernel
+  security_opt:
+    - no-new-privileges:true      # bloqueia escalada via setuid
+  pids_limit: 200
+  restart: unless-stopped
+
+services:
+  backend:
+    <<: *hardening
+    image: handson/backend:multi
+    environment:
+      - NODE_ENV=production
+      - OTEL_SDK_DISABLED=true
+    tmpfs:
+      - /tmp
+    mem_limit: 256m
+    cpus: 0.5
+    # sem "ports": o backend só é acessível pela rede interna, via nginx
+    networks:
+      - handson
+
+  frontend:
+    <<: *hardening
+    image: handson/frontend:hardened
+    tmpfs:
+      - /tmp                      # pid e caches temporários do nginx-unprivileged
+    mem_limit: 64m
+    cpus: 0.25
+    ports:
+      - "8080:8080"
+    depends_on:
+      - backend
+    networks:
+      - handson
+
+networks:
+  handson:
+    driver: bridge
