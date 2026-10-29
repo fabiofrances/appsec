@@ -1,0 +1,10 @@
+# Regras do hadolint para os labs
+# Uso: docker run --rm -i -v "$PWD/hands-on/lab06-supply-chain/.hadolint.yaml:/.config/hadolint.yaml" \
+#        hadolint/hadolint < hands-on/lab01-single-stage/Dockerfile
+failure-threshold: warning
+ignored:
+  - DL3018   # pin de versão em "apk add" (não usamos apk nos labs)
+trustedRegistries:
+  - docker.io
+  - gcr.io
+  - cgr.dev

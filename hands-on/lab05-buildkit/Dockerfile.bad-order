@@ -1,0 +1,10 @@
+# Lab 05 — Ordem de camadas ERRADA (para comparar com o Dockerfile deste lab)
+# Build: docker build -f hands-on/lab05-buildkit/Dockerfile.bad-order -t handson/backend:bad-order backend
+# Altere qualquer arquivo em backend/src e rebuilde: o npm ci roda de novo inteiro.
+FROM node:22-alpine
+WORKDIR /app
+COPY . .
+RUN npm ci
+RUN npm run build
+USER node
+CMD ["node", "dist/main.js"]

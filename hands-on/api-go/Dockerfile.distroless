@@ -1,0 +1,19 @@
+# syntax=docker/dockerfile:1
+# API Go — runtime distroless/static (sem shell; tem CA certs, tzdata e /etc/passwd)
+# Build: docker build -f hands-on/api-go/Dockerfile.distroless -t handson/api-go:distroless hands-on/api-go
+ARG GO_VERSION=1.24
+
+FROM golang:${GO_VERSION}-alpine AS builder
+WORKDIR /src
+COPY go.mod ./
+RUN go mod download
+COPY . .
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/bmi-api .
+
+FROM gcr.io/distroless/static-debian12:nonroot AS production
+COPY --from=builder /out/bmi-api /bmi-api
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD ["/bmi-api", "-healthcheck"]
+ENTRYPOINT ["/bmi-api"]

@@ -1,0 +1,58 @@
+# Lab 07 — Docker Swarm
+# Deploy: make swarm-init swarm-deploy   (ou: docker stack deploy -c hands-on/lab07-swarm/stack.yml bmi)
+# REGISTRY vazio = imagens locais (1 nó). Multi-nó (Play with Docker): REGISTRY=127.0.0.1:5000/
+# BACKEND_IMAGE troca a implementação: handson/backend:multi (NestJS) ou handson/api-go:scratch (Go)
+services:
+  backend:
+    image: ${REGISTRY:-}${BACKEND_IMAGE:-handson/backend:multi}
+    environment:
+      - NODE_ENV=production
+      - OTEL_SDK_DISABLED=true
+    secrets:
+      - source: bmi_api_key       # montado em /run/secrets/bmi_api_key (tmpfs, nunca em env)
+        mode: 0400
+    networks:
+      - bmi
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first        # sobe a nova antes de matar a antiga
+        failure_action: rollback
+        monitor: 20s
+      rollback_config:
+        parallelism: 1
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  frontend:
+    image: ${REGISTRY:-}handson/frontend:hardened
+    ports:
+      - "8080:8080"               # routing mesh: responde em qualquer nó do cluster
+    networks:
+      - bmi
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        order: start-first
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 64M
+
+secrets:
+  bmi_api_key:
+    external: true                # criado antes via "docker secret create"
+
+networks:
+  bmi:
+    driver: overlay

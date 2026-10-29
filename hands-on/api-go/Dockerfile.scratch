@@ -1,0 +1,26 @@
+# syntax=docker/dockerfile:1
+# API Go — runtime scratch: a imagem é SÓ o binário estático (~7 MB)
+# Build: docker build -f hands-on/api-go/Dockerfile.scratch -t handson/api-go:scratch hands-on/api-go
+#
+# scratch não tem nada: nem shell, nem /etc/passwd, nem CA certs, nem timezone.
+#  - CGO_ENABLED=0 → binário sem dependência de libc
+#  - USER numérico (não existe /etc/passwd para resolver nomes)
+#  - se a app fizer HTTPS de saída, copie /etc/ssl/certs/ca-certificates.crt do builder
+#  - healthcheck feito pelo próprio binário (flag -healthcheck)
+ARG GO_VERSION=1.24
+
+FROM golang:${GO_VERSION}-alpine AS builder
+WORKDIR /src
+COPY go.mod ./
+RUN go mod download
+COPY . .
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/bmi-api .
+
+FROM scratch AS production
+COPY --from=builder /out/bmi-api /bmi-api
+USER 65532:65532
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD ["/bmi-api", "-healthcheck"]
+ENTRYPOINT ["/bmi-api"]

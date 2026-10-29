@@ -1,0 +1,20 @@
+# syntax=docker/dockerfile:1
+# API Go — multi-stage com runtime alpine (tem shell/busybox: útil para debug)
+# Build: docker build -f hands-on/api-go/Dockerfile.alpine -t handson/api-go:alpine hands-on/api-go
+ARG GO_VERSION=1.24
+
+FROM golang:${GO_VERSION}-alpine AS builder
+WORKDIR /src
+COPY go.mod ./
+RUN go mod download
+COPY . .
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/bmi-api .
+
+FROM alpine:3.21 AS production
+COPY --from=builder /out/bmi-api /usr/local/bin/bmi-api
+USER 65532:65532
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD ["bmi-api", "-healthcheck"]
+ENTRYPOINT ["bmi-api"]

@@ -18,6 +18,9 @@
 
 Repositório didático para palestra sobre **Application Security (AppSec)**, demonstrando como integrar segurança ao ciclo de desenvolvimento de uma aplicação real.
 
+> **Hands-on de Containerização (~2h):** o mesmo app também é usado numa palestra prática sobre imagens, Dockerfile, scan, hardening e Swarm.
+> Veja [`roteiro-containerizacao.md`](roteiro-containerizacao.md), [`hands-on/`](hands-on/README.md) e `reports/containerizacao-palestra.pptx` (gerado por `infra/scripts/generate_pptx_containers.py`).
+
 ## Visão Geral
 
 Aplicação de cálculo de IMC (Índice de Massa Corporal) construída com boas práticas de desenvolvimento e ferramentas de segurança integradas ao pipeline.
