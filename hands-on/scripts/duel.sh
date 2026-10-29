@@ -17,7 +17,7 @@ else
   IMAGES=(handson/backend:alpine handson/backend:distroless)
 fi
 
-count() { grep -o "\"Severity\": \"$1\"" "$2" | wc -l | tr -d ' '; }
+count() { grep -c "\"Severity\": \"$1\"" "$2" || true; }   # grep -c sai com 1 quando é 0
 has() { grep -qE "$1" "$2" && echo "sim" || echo "não"; }
 
 declare -A R

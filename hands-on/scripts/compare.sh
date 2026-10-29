@@ -25,7 +25,7 @@ if [[ ${#IMAGES[@]} -eq 0 ]]; then
 fi
 
 # conta pelo JSON do trivy sem depender de python/jq (portável para o PWD)
-count() { grep -o "\"Severity\": \"$1\"" "$2" | wc -l | tr -d ' '; }
+count() { grep -c "\"Severity\": \"$1\"" "$2" || true; }   # grep -c sai com 1 quando é 0
 
 ROWS=()
 for IMAGE in "${IMAGES[@]}"; do
