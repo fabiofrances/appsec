@@ -19,28 +19,30 @@ from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.util import Inches, Pt
 
-# ── Números do comparativo (MB) — substituir pelos medidos ───────────────────
-ESTIMATED = True
+# ── Números medidos em 29/10/2026 (make lab-compare / lab-duel no WSL2) ─────
+# CVEs mudam toda semana: remeça na véspera (ver hands-on/VALIDACAO.md).
+ESTIMATED = False
 MEASURED = {
-    "backend:single": 1200,
-    "backend:full": 1100,
-    "api-go:single": 900,
-    "backend:slim": 250,
-    "backend:alpine": 200,
-    "backend:distroless": 200,
-    "backend:chainguard": 200,
-    "api-go:alpine": 15,
-    "api-go:distroless": 9,
-    "api-go:scratch": 7,
+    "backend:single": 2070,
+    "backend:full": 1715,
+    "api-go:single": 1375,
+    "backend:slim": 477,
+    "backend:chainguard": 410,
+    "backend:alpine": 394,
+    "backend:distroless": 361,
+    "api-go:alpine": 21,
+    "api-go:distroless": 15,
+    "api-go:scratch": 9,
 }
 
-# Duelo Alpine x Distroless (make lab-duel) — substituir pelos medidos
+# Duelo Alpine x Distroless (make lab-duel)
 DUEL = {
-    "Tamanho": ("≈ 200 MB", "≈ 200 MB"),
-    "Arquivos no filesystem": ("≈ 8 mil", "≈ 7 mil"),
+    "Tamanho": ("394 MB", "361 MB"),
+    "Arquivos no filesystem": ("18.946", "17.676"),
+    "Executáveis em /bin": ("314", "0"),
     "Shell / pacotes": ("sh + apk", "nenhum"),
     "libc": ("musl", "glibc"),
-    "Usuário": ("node (USER manual)", "nonroot (tag)"),
+    "CVEs CRITICAL / HIGH": ("1 / 35 (0 no SO)", "2 / 31"),
     "docker exec sh": ("funciona", "falha"),
 }
 
@@ -276,9 +278,9 @@ s = new_slide("Fio condutor: a mesma API, do pior Dockerfile possível até a im
 title(s, "Mesma API, duas imagens", "O placar da aula")
 big = [
     ("backend:single", f"{MEASURED['backend:single']:,} MB".replace(",", "."), CORAL,
-     ["node:22 full + devDeps", "roda como root", "centenas de CVEs"]),
+     ["node:22 full + devDeps", "roda como root", "25 CRITICAL · 537 HIGH"]),
     ("api-go:scratch", f"{MEASURED['api-go:scratch']} MB", TEAL,
-     ["binário estático", "usuário 65532", "zero pacotes de SO"]),
+     ["binário estático", "usuário 65532", "0 CVEs (Go 1.27)"]),
 ]
 for i, (name, val, color, facts) in enumerate(big):
     x = 0.6 + i * 6.25
@@ -371,7 +373,7 @@ table(s, 0.6, 1.75, [2.6, 2.6, 1.3, 2.7, 2.9], [
     ["node:22-slim", "Debian mínimo", "glibc", "bash, apt", "runtime com glibc"],
     ["node:22-alpine", "Alpine", "musl", "busybox sh, apk", "runtime pequeno"],
     ["distroless", "Debian sem userland", "glibc", "nenhum", "runtime de produção"],
-    ["chainguard", "Wolfi", "glibc", "nenhum (-dev tem)", "runtime ~0 CVEs"],
+    ["chainguard", "Wolfi", "glibc", "busybox sh (:latest)", "runtime 0 CVEs de SO"],
     ["scratch", "vazio", "—", "nenhum", "binário estático"],
 ], size=15, row_h=0.6, highlight={3})
 lab(s, "make lab-bases lab-go lab-compare")
@@ -406,7 +408,7 @@ text(s, 0.6, 6.25, 12, 0.5, [[("Regra: ", {"bold": True, "color": TEAL}),
 # ═════════════════════════════════════════════════════════════════════════════
 s = new_slide("Sem shell = sem docker exec sh. Debug com docker debug ou imagem :debug. "
               "HEALTHCHECK vai para o orquestrador ou para o próprio binário (flag -healthcheck da API Go).")
-title(s, "Sem shell: o que muda", "Bloco 2 · distroless · chainguard · scratch")
+title(s, "Sem shell: o que muda", "Bloco 2 · distroless · scratch")
 card(s, 0.6, 1.75, 3.9, 2.55, "Debug", ["sem docker exec sh", "docker debug <ctr>", "tag :debug (busybox)"],
      color=DOCKER, mark="1")
 card(s, 4.72, 1.75, 3.9, 2.55, "Healthcheck", ["sem wget/curl", "probe no orquestrador",
@@ -423,17 +425,19 @@ code(s, 0.6, 4.6, 12.15, 1.25, [
 # ═════════════════════════════════════════════════════════════════════════════
 s = new_slide("Resposta à votação de abertura, com dados medidos por make lab-duel. Com Node, tamanho "
               "não decide: a decisão é libc (musl e Node experimental x glibc), superfície de ataque "
-              "(shell e apk disponíveis ao atacante) e capacidade de debug. Terceira via: Chainguard/Wolfi. "
+              "(shell e apk disponíveis ao atacante) e capacidade de debug. Chainguard: 0 CVEs de SO, mas a "
+              ":latest gratuita traz busybox/sh. "
               "Para Go, o duelo nem existe: scratch.")
 title(s, "O duelo: Alpine x Distroless", "Bloco 2 · resposta à votação")
 rows = [["", "Alpine", "Distroless"]] + [[k, a, b] for k, (a, b) in DUEL.items()]
-table(s, 0.6, 1.75, [3.4, 2.5, 2.5], rows, size=15, row_h=0.6)
+table(s, 0.6, 1.75, [3.2, 2.6, 2.6], rows, size=15, row_h=0.56)
 verdict = [
     [("Tamanho não decide ", {"bold": True, "color": AMBER}), ("com Node: node_modules domina", {})],
     [("Decide: ", {"bold": True, "color": TEAL}), ("libc, superfície de ataque e debug", {})],
-    [("Terceira via: ", {"bold": True, "color": DOCKER}), ("Chainguard (glibc, sem shell, ~0 CVEs)", {})],
+    [("CVEs: ", {"bold": True, "color": CORAL}), ("a maioria é da sua app (node_modules)", {})],
+    [("Chainguard: ", {"bold": True, "color": DOCKER}), ("0 CVEs de SO, mas a :latest traz sh", {})],
 ]
-text(s, 9.35, 1.85, 3.4, 4.2, verdict, size=17, space_after=18)
+text(s, 9.3, 1.85, 3.45, 4.4, verdict, size=16, space_after=14)
 if ESTIMATED:
     text(s, 0.6, 6.05, 8.4, 0.4, "≈ valores estimados — atualizar com make lab-duel",
          size=12, color=MUTED)
@@ -485,6 +489,34 @@ ca.tick_labels.font.name = MONO
 if ESTIMATED:
     text(s, 0.6, 6.65, 12, 0.4, "≈ valores estimados — atualizar com make lab-compare",
          size=12, color=MUTED)
+
+# ═════════════════════════════════════════════════════════════════════════════
+# 10b — De onde vêm as CVEs
+# ═════════════════════════════════════════════════════════════════════════════
+s = new_slide("O argumento que mais surpreende: nas bases mínimas, a maior parte das CVEs é da app "
+              "(node_modules; o CRITICAL é proxy-addr, dependência do Express). A node:22-alpine ainda traz "
+              "o npm, que soma ~10 HIGH. E a história do Go: com 1.24 (fora de suporte), 23 HIGH até no "
+              "scratch, vindos da stdlib embutida; com 1.27, zero.")
+title(s, "As CVEs são suas", "Bloco 2 · de onde vêm as CVEs")
+table(s, 0.6, 1.75, [2.4, 2.3, 3.0], [
+    ["Imagem", "SO (C / H)", "node_modules (C / H)"],
+    ["alpine", "0 / 0", "1 / 35 (app + npm da base)"],
+    ["distroless", "1 / 6", "1 / 25 (só a app)"],
+    ["chainguard", "0 / 0", "1 / 25 (só a app)"],
+    ["slim", "1 / 56", "1 / 35"],
+    ["full", "22 / 458", "1 / 35"],
+], size=15, row_h=0.6)
+rect(s, 8.6, 1.75, 4.15, 3.6, CARD)
+text(s, 8.85, 1.95, 3.7, 0.45, "E no Go?", size=20, bold=True, color=AMBER)
+text(s, 8.85, 2.5, 3.7, 2.8, [
+    [("Go 1.24  ", {"bold": True, "color": CORAL}), ("23 HIGH até no scratch", {})],
+    [("Go 1.27  ", {"bold": True, "color": TEAL}), ("0 CVEs", {})],
+    [("A stdlib vai dentro do binário: scratch não zera CVE com toolchain velha.",
+      {"color": MUTED, "size": 15})],
+], size=17, space_after=12)
+text(s, 0.6, 5.55, 12.1, 0.9, [[("Nas bases mínimas, ", {}),
+                                ("a maioria das CVEs vem da sua app", {"bold": True, "color": AMBER}),
+                                (", não da imagem base.", {})]], size=19)
 
 # ═════════════════════════════════════════════════════════════════════════════
 # 11 — Single x multi-stage
@@ -576,7 +608,9 @@ for i, c in enumerate(checks):
 # ═════════════════════════════════════════════════════════════════════════════
 # 15 — BuildKit
 # ═════════════════════════════════════════════════════════════════════════════
-s = new_slide("make lab-cache: o cache mount sobrevive até ao --no-cache. Secret mount para .npmrc. "
+s = new_slide("make lab-cache: altera 1 linha de código e rebuilda. Medido: 8 s com deps antes do código "
+              "x 45 s no bad-order. O cache mount ganha com rede lenta; com rede rápida não mudou o tempo. "
+              "Secret mount para .npmrc. "
               "Demo de ordem de camadas: alterar comentário em main.ts e rebuildar o Dockerfile "
               "bom e o bad-order. Multi-arch só demo do palestrante.")
 title(s, "BuildKit: builds rápidos e sem vazar segredo", "Bloco 4 · lab05-buildkit")
@@ -592,10 +626,10 @@ code(s, 0.6, 5.0, 7.4, 1.45, [
     "docker buildx build \\",
     "  --platform linux/amd64,linux/arm64 ...",
 ], size=14)
-card(s, 8.3, 1.75, 4.45, 1.45, "cache mount", ["sobrevive até ao --no-cache"], color=TEAL,
+card(s, 8.3, 1.75, 4.45, 1.45, "ordem das camadas", ["1 linha mudada: 8 s × 45 s"], color=TEAL,
      mark="1")
 card(s, 8.3, 3.37, 4.45, 1.45, "secret mount", ["token nunca vira camada"], color=AMBER, mark="2")
-card(s, 8.3, 5.0, 4.45, 1.45, "build-context", ["contexto extra nomeado"], color=DOCKER, mark="3")
+card(s, 8.3, 5.0, 4.45, 1.45, "cache mount", ["ganha com rede lenta"], color=DOCKER, mark="3")
 lab(s, "make lab-cache")
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -653,8 +687,8 @@ sc = [
 for i, (head, lines, color) in enumerate(sc):
     card(s, 0.6 + i * 3.1, 1.8, 2.9, 3.0, head, lines, color=color, mark=str(i + 1))
 text(s, 0.6, 5.15, 12.1, 0.9, [[("Gancho: ", {"bold": True, "color": AMBER}),
-                                ("o secret scan acha o DD_SECRET_KEY no docker-compose.yml da "
-                                 "palestra AppSec", {})]], size=18)
+                                ("o secret scan NÃO acha o DD_SECRET_KEY da palestra AppSec: "
+                                 "segredo genérico precisa de regra própria", {})]], size=18)
 lab(s, "make lab-sbom")
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -748,7 +782,7 @@ for i, (name, target) in enumerate(flow):
     text(s, x, 2.45, 1.86, 0.4, name, size=17, bold=True, align=PP_ALIGN.CENTER)
     text(s, x, 2.82, 1.86, 0.35, target, size=12, color=MUTED, font=MONO, align=PP_ALIGN.CENTER)
 code(s, 0.6, 3.55, 12.15, 2.4, [
-    "docker service update --image handson/api-go:scratch bmi_backend",
+    "docker service update --image handson/api-go:scratch bmi_backend   # 237 req, 0 falhas",
     "watch docker service ps bmi_backend        # start-first: sobe a nova, mata a antiga",
     "docker service rollback bmi_backend",
     "docker service logs bmi_backend --tail 20",
@@ -759,8 +793,8 @@ lab(s, "make swarm-init swarm-deploy swarm-update")
 # ═════════════════════════════════════════════════════════════════════════════
 # 23 — Próximos passos
 # ═════════════════════════════════════════════════════════════════════════════
-s = new_slide("Recapitular o placar: de single (≈1,2 GB, root, centenas de CVEs) a api-go:scratch "
-              "(≈7 MB, não-root, 0 CVEs). Próximos passos e link para a palestra AppSec.")
+s = new_slide("Recapitular o placar: de backend:single (2.070 MB, root, 25 CRITICAL e 537 HIGH) a "
+              "api-go:scratch (9 MB, não-root, 0 CVEs). Próximos passos e link para a palestra AppSec.")
 title(s, "Para levar para segunda-feira", "Encerramento")
 nxt = [
     ("Aplicar o checklist", ["nos Dockerfiles do time", "comece pelo multi-stage"], DOCKER),

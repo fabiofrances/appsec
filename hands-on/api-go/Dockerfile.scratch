@@ -7,7 +7,7 @@
 #  - USER numérico (não existe /etc/passwd para resolver nomes)
 #  - se a app fizer HTTPS de saída, copie /etc/ssl/certs/ca-certificates.crt do builder
 #  - healthcheck feito pelo próprio binário (flag -healthcheck)
-ARG GO_VERSION=1.24
+ARG GO_VERSION=1.27
 
 FROM golang:${GO_VERSION}-alpine AS builder
 WORKDIR /src

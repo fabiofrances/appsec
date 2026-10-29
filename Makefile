@@ -1,5 +1,8 @@
 .PHONY: up down build trivy trivy-dojo dep-check dep-check-dojo zap zap-dojo scan-all scan-all-dojo setup-dojo
 
+# bash: as receitas dos labs usam "time" e loops
+SHELL := /bin/bash
+
 ## Stack
 up:
 	docker compose up -d
@@ -47,11 +50,12 @@ HO            := hands-on
 TRIVY         := bash $(HO)/scripts/trivy.sh
 STACK         ?= bmi
 REGISTRY      ?=
-ADVERTISE_ADDR ?=
+# IP da rota padrão (WSL e PWD têm mais de uma interface); sobrescreva com ADVERTISE_ADDR=<ip>
+ADVERTISE_ADDR ?= $(shell ip route get 1 2>/dev/null | awk '{for (i = 1; i < NF; i++) if ($$i == "src") print $$(i + 1)}')
 DUEL          ?= handson/backend:alpine handson/backend:distroless handson/backend:chainguard
 BASE_IMAGES   := node:22 node:22-slim node:22-alpine \
 	             gcr.io/distroless/nodejs22-debian12:nonroot cgr.dev/chainguard/node:latest \
-	             golang:1.24 golang:1.24-alpine alpine:3.21 gcr.io/distroless/static-debian12:nonroot \
+	             golang:1.27 golang:1.27-alpine alpine:3.21 gcr.io/distroless/static-debian12:nonroot \
 	             nginx:1.27-alpine nginxinc/nginx-unprivileged:1.27-alpine \
 	             registry:2 aquasec/trivy:0.58.1 hadolint/hadolint:latest
 
@@ -102,12 +106,7 @@ lab-hardening-down:
 
 ## Lab 05 — BuildKit e cache
 lab-cache:
-	@echo "── sem cache mount (lab02), 2x --no-cache ──"
-	time docker build -q --no-cache -f $(HO)/lab02-multi-stage/Dockerfile -t handson/backend:multi backend
-	time docker build -q --no-cache -f $(HO)/lab02-multi-stage/Dockerfile -t handson/backend:multi backend
-	@echo "── com cache mount (lab05), 2x --no-cache ──"
-	time docker build -q --no-cache -f $(HO)/lab05-buildkit/Dockerfile -t handson/backend:buildkit backend
-	time docker build -q --no-cache -f $(HO)/lab05-buildkit/Dockerfile -t handson/backend:buildkit backend
+	bash $(HO)/scripts/cache-demo.sh
 
 ## Lab 06 — scan e supply chain
 lab-lint:
@@ -132,7 +131,7 @@ lab-sbom:
 
 ## Lab 07 — Docker Swarm
 swarm-init:
-	@docker info --format '{{.Swarm.LocalNodeState}}' | grep -q active || \
+	@docker info --format '{{.Swarm.LocalNodeState}}' | grep -qx active || \
 	    docker swarm init $(if $(ADVERTISE_ADDR),--advertise-addr $(ADVERTISE_ADDR),)
 	docker node ls
 
