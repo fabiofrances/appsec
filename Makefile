@@ -105,12 +105,7 @@ lab-hardening-down:
 
 ## Lab 05 — BuildKit e cache
 lab-cache:
-	@echo "── sem cache mount (lab02), 2x --no-cache ──"
-	time docker build -q --no-cache -f $(HO)/lab02-multi-stage/Dockerfile -t handson/backend:multi backend
-	time docker build -q --no-cache -f $(HO)/lab02-multi-stage/Dockerfile -t handson/backend:multi backend
-	@echo "── com cache mount (lab05), 2x --no-cache ──"
-	time docker build -q --no-cache -f $(HO)/lab05-buildkit/Dockerfile -t handson/backend:buildkit backend
-	time docker build -q --no-cache -f $(HO)/lab05-buildkit/Dockerfile -t handson/backend:buildkit backend
+	bash $(HO)/scripts/cache-demo.sh
 
 ## Lab 06 — scan e supply chain
 lab-lint:
