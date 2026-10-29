@@ -37,12 +37,13 @@ for IMAGE in "${IMAGES[@]}"; do
   R[$IMAGE,size]="$(( $(docker image inspect -f '{{.Size}}' "$IMAGE") / 1024 / 1024 )) MB"
   R[$IMAGE,files]=$(grep -vc '/$' "$FILES")
   R[$IMAGE,bins]=$(grep -cE '^(usr/)?s?bin/[^/]+$' "$FILES" || true)
-  R[$IMAGE,shell]=$(has '^bin/(sh|bash|ash)$' "$FILES")
-  R[$IMAGE,pkg]=$(has '^(sbin/apk|usr/bin/apt-get|usr/bin/dpkg|usr/bin/apk)$' "$FILES")
+  # /usr unificado (Wolfi, Debian novo): /bin pode ser link para usr/bin
+  R[$IMAGE,shell]=$(has '^(usr/)?bin/(sh|bash|ash)$' "$FILES")
+  R[$IMAGE,pkg]=$(has '^(usr/)?s?bin/(apk|apt-get|dpkg)$' "$FILES")
   if grep -qE '^lib/ld-musl' "$FILES"; then R[$IMAGE,libc]="musl"
   elif grep -qE 'libc\.so\.6$' "$FILES"; then R[$IMAGE,libc]="glibc"
   else R[$IMAGE,libc]="nenhuma"; fi
-  R[$IMAGE,busybox]=$(has '^bin/busybox$' "$FILES")
+  R[$IMAGE,busybox]=$(has '^(usr/)?bin/busybox$' "$FILES")
   USER_=$(docker image inspect -f '{{.Config.User}}' "$IMAGE")
   R[$IMAGE,user]="${USER_:-root}"
 

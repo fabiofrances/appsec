@@ -52,11 +52,11 @@ Rode na raiz do repositório e marque cada item.
 ### 2. Cada imagem responde à API
 ```bash
 for img in handson/backend:{single,multi,full,slim,alpine,distroless,chainguard} handson/api-go:{single,alpine,distroless,scratch}; do
-  docker run -d --rm --name t -p 3000:3000 -e OTEL_SDK_DISABLED=true $img >/dev/null
+  docker run -d --rm --name apitest -p 3000:3000 -e OTEL_SDK_DISABLED=true $img >/dev/null
   sleep 6
   printf '%-32s ' "$img"
   curl -s -X POST localhost:3000/bmi/calculate -H 'Content-Type: application/json' -d '{"weight":70,"height":1.75}'
-  echo; docker stop t >/dev/null
+  echo; docker stop apitest >/dev/null
 done
 ```
 - [ ] todas retornam `{"bmi":22.86,"classification":"Peso normal",...}`

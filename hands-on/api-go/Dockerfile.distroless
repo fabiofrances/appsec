@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # API Go — runtime distroless/static (sem shell; tem CA certs, tzdata e /etc/passwd)
 # Build: docker build -f hands-on/api-go/Dockerfile.distroless -t handson/api-go:distroless hands-on/api-go
-ARG GO_VERSION=1.24
+ARG GO_VERSION=1.27
 
 FROM golang:${GO_VERSION}-alpine AS builder
 WORKDIR /src

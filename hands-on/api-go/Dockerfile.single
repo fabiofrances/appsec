@@ -1,6 +1,6 @@
 # API Go — single-stage: a imagem final carrega o toolchain Go inteiro (~800 MB+)
 # Build: docker build -f hands-on/api-go/Dockerfile.single -t handson/api-go:single hands-on/api-go
-FROM golang:1.24
+FROM golang:1.27
 WORKDIR /src
 COPY . .
 RUN go build -o /usr/local/bin/bmi-api .

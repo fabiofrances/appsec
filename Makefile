@@ -51,7 +51,7 @@ ADVERTISE_ADDR ?=
 DUEL          ?= handson/backend:alpine handson/backend:distroless handson/backend:chainguard
 BASE_IMAGES   := node:22 node:22-slim node:22-alpine \
 	             gcr.io/distroless/nodejs22-debian12:nonroot cgr.dev/chainguard/node:latest \
-	             golang:1.24 golang:1.24-alpine alpine:3.21 gcr.io/distroless/static-debian12:nonroot \
+	             golang:1.27 golang:1.27-alpine alpine:3.21 gcr.io/distroless/static-debian12:nonroot \
 	             nginx:1.27-alpine nginxinc/nginx-unprivileged:1.27-alpine \
 	             registry:2 aquasec/trivy:0.58.1 hadolint/hadolint:latest
 
