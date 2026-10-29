@@ -10,6 +10,8 @@ services:
       - OTEL_SDK_DISABLED=true
     secrets:
       - source: bmi_api_key       # montado em /run/secrets/bmi_api_key (tmpfs, nunca em env)
+        uid: "1000"               # usuário "node" da imagem; sem isso o dono é root e o 0400 bloqueia a leitura
+        gid: "1000"
         mode: 0400
     networks:
       - bmi
