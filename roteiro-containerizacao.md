@@ -429,6 +429,17 @@ make swarm-down
 ### Recapitulando o placar
 Projete a tabela final do `make lab-compare`: de `backend:single` (2.070 MB, root, 25 CRITICAL e 537 HIGH) a `api-go:scratch` (9 MB, não-root, 0 CVEs).
 
+**Slide "Quanto cada técnica enxuga"**: a jornada em 4 degraus, com a mesma API e o mesmo contrato HTTP:
+
+| Degrau | Tamanho | CVEs CRITICAL + HIGH |
+|---|---|---|
+| 1. single-stage (`node:22`, root) | 2.070 MB | 562 |
+| 2. multi-stage (alpine) | 394 MB (**−81%**) | 36 (**−94%**) |
+| 3. distroless | 361 MB | 33 |
+| 4. Go + scratch | **9 MB (−99,6%)** | **0** |
+
+> O degrau que mais pesa é o **multi-stage**, não a escolha da base. Use isso para fechar o debate da votação.
+
 ### Próximos passos
 - Levar o checklist do bloco 4 para os Dockerfiles do time
 - Colocar `hadolint` + `trivy image --exit-code 1` no pipeline

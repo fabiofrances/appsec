@@ -791,6 +791,74 @@ code(s, 0.6, 3.55, 12.15, 2.4, [
 lab(s, "make swarm-init swarm-deploy swarm-update")
 
 # ═════════════════════════════════════════════════════════════════════════════
+# 22b — A jornada: quanto cada técnica enxuga
+# ═════════════════════════════════════════════════════════════════════════════
+JOURNEY = [  # (degrau, MB, CVEs CRITICAL+HIGH) — make lab-compare
+    ("1. single-stage", MEASURED["backend:single"], 25 + 537),
+    ("2. multi-stage", MEASURED["backend:alpine"], 1 + 35),
+    ("3. distroless", MEASURED["backend:distroless"], 2 + 31),
+    ("4. Go + scratch", MEASURED["api-go:scratch"], 0),
+]
+
+
+def journey_chart(s, x, y, w, h, values, number_format):
+    cd = CategoryChartData()
+    cd.categories = [step for step, *_ in JOURNEY]
+    cd.add_series("valor", values)
+    ch = s.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED, Inches(x), Inches(y),
+                            Inches(w), Inches(h), cd).chart
+    ch.has_legend = False
+    ch.has_title = False
+    ch.font.size = Pt(13)
+    ch.font.name = FONT
+    ch.font.color.rgb = MUTED
+    plot = ch.plots[0]
+    plot.gap_width = 60
+    plot.has_data_labels = True
+    dl = plot.data_labels
+    dl.number_format = number_format
+    dl.number_format_is_linked = False
+    dl.position = XL_LABEL_POSITION.OUTSIDE_END
+    dl.font.size = Pt(15)
+    dl.font.bold = True
+    dl.font.color.rgb = WHITE
+    for idx in range(len(values)):
+        pt = plot.series[0].points[idx]
+        pt.format.fill.solid()
+        pt.format.fill.fore_color.rgb = TEAL if idx == len(values) - 1 else DOCKER
+    va = ch.value_axis
+    va.visible = False
+    va.has_major_gridlines = False
+    ca = ch.category_axis
+    ca.format.line.color.rgb = CARD
+    ca.tick_labels.font.color.rgb = WHITE
+    ca.tick_labels.font.size = Pt(13)
+
+
+s = new_slide("O resumo da aula num slide: cada técnica é um degrau. Multi-stage com alpine já corta 81% "
+              "do tamanho e 94% das CVEs críticas e altas; distroless tira o shell; e o binário estático em "
+              "scratch chega a 9 MB e zero CVEs. Volte à votação: o que mais pesou não foi a base, foi "
+              "o multi-stage e o que vai dentro da imagem.")
+title(s, "Quanto cada técnica enxuga", "Encerramento · a jornada")
+start_mb, start_cve = JOURNEY[0][1], JOURNEY[0][2]
+end_mb = JOURNEY[-1][1]
+pct = f"−{(1 - end_mb / start_mb) * 100:.1f}%".replace(".", ",")
+for i, (label, value, color) in enumerate([
+    ("Tamanho da imagem (MB)", pct, TEAL),
+    ("CVEs CRITICAL + HIGH", f"{start_cve} → 0", TEAL),
+]):
+    x = 0.6 + i * 6.25
+    rect(s, x, 1.65, 5.85, 4.95, CARD)
+    text(s, x + 0.3, 1.8, 3.4, 0.45, label, size=17, bold=True)
+    text(s, x + 3.0, 1.72, 2.6, 0.6, value, size=26, bold=True, color=color, align=PP_ALIGN.RIGHT)
+    journey_chart(s, x + 0.15, 2.45, 5.55, 4.05,
+                  [mb for _, mb, _ in JOURNEY] if i == 0 else [cve for *_, cve in JOURNEY],
+                  "#,##0")
+text(s, 0.6, 6.7, 12.1, 0.45, [[("Mesma API, mesmo contrato HTTP. ", {"bold": True}),
+                                ("Só mudou a forma de construir a imagem.", {"color": MUTED})]],
+     size=16)
+
+# ═════════════════════════════════════════════════════════════════════════════
 # 23 — Próximos passos
 # ═════════════════════════════════════════════════════════════════════════════
 s = new_slide("Recapitular o placar: de backend:single (2.070 MB, root, 25 CRITICAL e 537 HIGH) a "
@@ -827,7 +895,7 @@ for i, q in enumerate(qs):
 
 
 # ── Salvar ───────────────────────────────────────────────────────────────────
-out = os.path.join(os.path.dirname(__file__), "..", "..", "reports", "containerizacao-palestra.pptx")
-out = os.path.abspath(out)
+default_out = os.path.join(os.path.dirname(__file__), "..", "..", "reports", "containerizacao-palestra.pptx")
+out = os.path.abspath(os.environ.get("PPTX_OUT", default_out))   # PPTX_OUT: gerar cópia com o deck aberto
 prs.save(out)
 print(f"✔ {len(prs.slides)} slides → {out}")
