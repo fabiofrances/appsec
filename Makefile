@@ -130,7 +130,7 @@ lab-sbom:
 
 ## Lab 07 — Docker Swarm
 swarm-init:
-	@docker info --format '{{.Swarm.LocalNodeState}}' | grep -q active || \
+	@docker info --format '{{.Swarm.LocalNodeState}}' | grep -qx active || \
 	    docker swarm init $(if $(ADVERTISE_ADDR),--advertise-addr $(ADVERTISE_ADDR),)
 	docker node ls
 
