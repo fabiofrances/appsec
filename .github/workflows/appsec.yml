@@ -152,18 +152,25 @@ jobs:
           done
           curl -sf http://localhost/api/health
 
-      - name: Prepare reports dir
-        # o container do ZAP roda como usuário "zap" e precisa gravar em reports/
-        run: mkdir -p reports && chmod 777 reports
-
       - name: Run ZAP full scan
         uses: zaproxy/action-full-scan@v0.13.0
         with:
           target: http://localhost
           rules_file_name: infra/zap/zap-rules.tsv
-          cmd_options: '-J reports/zap-report.json -x reports/zap-report.xml -r reports/zap-report.html -I'
+          # a action já gera report_json.json, report_html.html e report_md.md na raiz;
+          # só acrescentamos o XML (exigido pelo DefectDojo)
+          cmd_options: '-x report_xml.xml -I'
           allow_issue_writing: false
           fail_action: false
+
+      - name: Collect ZAP reports
+        if: always()
+        run: |
+          mkdir -p reports
+          for ext in json html xml; do
+            [ -f "report_$ext.$ext" ] && cp "report_$ext.$ext" "reports/zap-report.$ext"
+          done
+          ls -la reports/
 
       - name: Upload ZAP report
         if: always()
