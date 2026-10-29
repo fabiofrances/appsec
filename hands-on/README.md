@@ -30,7 +30,12 @@ Para o lab de Swarm, crie 3 instâncias (ou use o template "3 Managers and 2 Wor
 ## Antes da aula
 
 ```bash
-make lab-prepull      # baixa todas as imagens base (~3 GB) — faça isso numa rede boa
+make lab-prepull      # imagens base (~3 GB) + banco do Trivy — faça isso numa rede boa
+export TRIVY_SKIP_DB_UPDATE=true   # durante a aula: Trivy não baixa o banco de novo
+
+# sem internet na aula? leve o banco num arquivo:
+make lab-trivy-db-save   # na véspera → reports/trivy-db.tgz (~130 MB)
+make lab-trivy-db-load   # na máquina do participante
 ```
 
 ## Labs

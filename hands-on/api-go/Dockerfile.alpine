@@ -12,6 +12,8 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/bmi-api .
 
 FROM alpine:3.21 AS production
+# nome para humanos ("id" mostra uid=65532(app)), número no USER (o Kubernetes valida runAsNonRoot)
+RUN addgroup -S -g 65532 app && adduser -S -D -H -u 65532 -G app app
 COPY --from=builder /out/bmi-api /usr/local/bin/bmi-api
 USER 65532:65532
 EXPOSE 3000

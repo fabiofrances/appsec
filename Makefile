@@ -45,7 +45,7 @@ setup-dojo:
 # ═══════════════════════════════════════════════════════════════════════════
 ## Hands-on de containerização (ver hands-on/README.md e roteiro-containerizacao.md)
 # ═══════════════════════════════════════════════════════════════════════════
-.PHONY: lab-duel lab-prepull lab-single lab-multi lab-bases lab-go-test lab-go lab-compare lab-hardening-build lab-hardening lab-hardening-down lab-cache lab-lint lab-scan lab-sbom swarm-init swarm-registry swarm-deploy swarm-scale swarm-update swarm-rollback swarm-down
+.PHONY: lab-trivy-db lab-trivy-db-save lab-trivy-db-load lab-duel lab-prepull lab-single lab-multi lab-bases lab-go-test lab-go lab-compare lab-hardening-build lab-hardening lab-hardening-down lab-cache lab-lint lab-scan lab-sbom swarm-init swarm-registry swarm-deploy swarm-scale swarm-update swarm-rollback swarm-down
 HO            := hands-on
 TRIVY         := bash $(HO)/scripts/trivy.sh
 STACK         ?= bmi
@@ -60,8 +60,23 @@ BASE_IMAGES   := node:22 node:22-slim node:22-alpine \
 	             registry:2 aquasec/trivy:0.58.1 hadolint/hadolint:latest
 
 ## Preparação
-lab-prepull:
+lab-prepull: lab-trivy-db
 	@for img in $(BASE_IMAGES); do docker pull -q $$img; done
+
+## Banco do Trivy: baixa uma vez (volume trivy-cache) e reaproveita nos labs e no make trivy
+lab-trivy-db:
+	$(TRIVY) image --download-db-only
+	@echo "Durante a aula, para não baixar de novo: export TRIVY_SKIP_DB_UPDATE=true"
+
+# Plano B offline: leve o banco num arquivo (pendrive, rede ruim)
+lab-trivy-db-save:
+	mkdir -p reports
+	docker run --rm -v trivy-cache:/cache -v "$(CURDIR)/reports:/out" alpine:3.21 		tar czf /out/trivy-db.tgz -C /cache .
+	@ls -lh reports/trivy-db.tgz
+
+lab-trivy-db-load:
+	docker run --rm -v trivy-cache:/cache -v "$(CURDIR)/reports:/out" alpine:3.21 		tar xzf /out/trivy-db.tgz -C /cache
+	@echo "Banco carregado. Use: export TRIVY_SKIP_DB_UPDATE=true"
 
 ## Labs 01-03 — single x multi-stage e imagens base (backend NestJS)
 lab-single:
