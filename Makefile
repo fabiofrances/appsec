@@ -1,5 +1,8 @@
 .PHONY: up down build trivy trivy-dojo dep-check dep-check-dojo zap zap-dojo scan-all scan-all-dojo setup-dojo
 
+# bash: as receitas dos labs usam "time" e loops
+SHELL := /bin/bash
+
 ## Stack
 up:
 	docker compose up -d
