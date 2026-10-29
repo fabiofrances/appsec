@@ -50,7 +50,8 @@ HO            := hands-on
 TRIVY         := bash $(HO)/scripts/trivy.sh
 STACK         ?= bmi
 REGISTRY      ?=
-ADVERTISE_ADDR ?=
+# IP da rota padrão (WSL e PWD têm mais de uma interface); sobrescreva com ADVERTISE_ADDR=<ip>
+ADVERTISE_ADDR ?= $(shell ip route get 1 2>/dev/null | awk '{for (i = 1; i < NF; i++) if ($$i == "src") print $$(i + 1)}')
 DUEL          ?= handson/backend:alpine handson/backend:distroless handson/backend:chainguard
 BASE_IMAGES   := node:22 node:22-slim node:22-alpine \
 	             gcr.io/distroless/nodejs22-debian12:nonroot cgr.dev/chainguard/node:latest \
