@@ -142,36 +142,47 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Start application stack
+        # só a app (o DAST não precisa da stack do DefectDojo)
         run: |
-          docker compose up -d --build
-          echo "Waiting for services to be ready..."
-          sleep 30
+          docker compose up -d --build frontend backend jaeger
+          echo "Waiting for frontend and API..."
+          for i in $(seq 1 60); do
+            curl -sf http://localhost/ >/dev/null && curl -sf http://localhost/api/health >/dev/null && break
+            sleep 2
+          done
+          curl -sf http://localhost/api/health
 
-      - name: Run ZAP baseline scan
-        uses: zaproxy/action-full-scan@v0.10.0
+      - name: Run ZAP full scan
+        uses: zaproxy/action-full-scan@v0.13.0
         with:
           target: http://localhost
-          rules_file_name: infra/zap/zap-baseline.yaml
-          cmd_options: '-J reports/zap-report.json'
+          rules_file_name: infra/zap/zap-rules.tsv
+          # a action já gera report_json.json, report_html.html e report_md.md na raiz;
+          # só acrescentamos o XML (exigido pelo DefectDojo)
+          cmd_options: '-x report_xml.xml -I'
+          allow_issue_writing: false
           fail_action: false
 
+      - name: Collect ZAP reports
+        if: always()
+        run: |
+          mkdir -p reports
+          for ext in json html xml; do
+            [ -f "report_$ext.$ext" ] && cp "report_$ext.$ext" "reports/zap-report.$ext"
+          done
+          ls -la reports/
+
       - name: Upload ZAP report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: zap-report
-          path: reports/zap-report.json
+          path: reports/zap-report.*
 
       - name: Import to DefectDojo
         if: env.DEFECTDOJO_URL != ''
         run: |
-          curl -s -X POST "$DEFECTDOJO_URL/api/v2/import-scan/" \
-            -H "Authorization: Token $DEFECTDOJO_TOKEN" \
-            -F "scan_type=ZAP Scan" \
-            -F "product_id=$DEFECTDOJO_PRODUCT_ID" \
-            -F "engagement_name=CI - $(date +%Y-%m-%d)" \
-            -F "file=@reports/zap-report.json" \
-            -F "active=true" \
-            -F "verified=false"
+          curl -s -X POST "$DEFECTDOJO_URL/api/v2/import-scan/"             -H "Authorization: Token $DEFECTDOJO_TOKEN"             -F "scan_type=ZAP Scan"             -F "product_id=$DEFECTDOJO_PRODUCT_ID"             -F "engagement_name=CI - $(date +%Y-%m-%d)"             -F "file=@reports/zap-report.xml"             -F "active=true"             -F "verified=false"
 
       - name: Tear down stack
         if: always()
