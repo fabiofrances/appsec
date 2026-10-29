@@ -157,7 +157,7 @@ jobs:
         run: mkdir -p reports && chmod 777 reports
 
       - name: Run ZAP full scan
-        uses: zaproxy/action-full-scan@v0.10.0
+        uses: zaproxy/action-full-scan@v0.13.0
         with:
           target: http://localhost
           rules_file_name: infra/zap/zap-rules.tsv
