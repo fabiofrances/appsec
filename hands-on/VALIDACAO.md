@@ -1,14 +1,35 @@
 # Validação do Hands-on — instruções para o agente executor
 
-> **Para quem é:** um agente (ou pessoa) rodando num notebook **com Docker e make**.
-> O material foi escrito numa máquina sem Docker nem Node: nada aqui foi buildado ainda.
-> O que já foi verificado: API em Go (`go vet` + `go test`: 4 testes ok; binário estático linux/amd64 com 6,8 MB),
-> `bash -n` nos scripts, parse dos YAMLs, deck gerado e validado (24 slides).
+> **Para quem é:** um agente (ou pessoa) rodando numa máquina **com Docker e make**. Use antes de cada
+> apresentação para remedir os números (CVEs mudam toda semana).
+
+## Última validação — 29/10/2026 (WSL2 Ubuntu 24.04, Docker 29.9.2, Trivy 0.58.1)
+
+Todos os labs passaram (itens 0 a 7; o 8 multi-nó e o 9 regressão AppSec não foram executados). O que a validação corrigiu:
+
+| Problema encontrado | Correção |
+|---|---|
+| `go 1.24` no `go.mod` faz o Go baixar a toolchain inexistente `go1.24` | `go 1.24.0` |
+| Go 1.24.13 (fora de suporte): 23 CVEs HIGH na stdlib, **até no scratch** | Dockerfiles e prepull com Go 1.27 → 0 CVEs |
+| `compare.sh`/`duel.sh` morriam em silêncio com imagem de 0 CVEs (`grep` + `pipefail`) | `grep -c` com fallback `true` |
+| `duel.sh` não via o shell do Chainguard (`/usr` unificado) | detecta `usr/bin/...` |
+| Chainguard `:latest` gratuita **tem** BusyBox/`sh` (o material dizia "sem shell") | roteiro, PPT e Dockerfile corrigidos |
+| `make` usava `dash` (sem `time`) | `SHELL := /bin/bash` |
+| Cache mount não mudou o tempo com rede rápida (~40 s nos dois) | `lab-cache` virou a demo de ordem das camadas: **8 s × 45 s** |
+| `HEALTHCHECK` em forma shell disparava `DL3025` no hadolint | forma JSON (`wget --spider`) |
+| `swarm-init`: `inactive` casava com `grep -q active` | `grep -qx` |
+| `swarm-init` no WSL: duas interfaces, Docker não escolhe o IP | `ADVERTISE_ADDR` detectado pela rota padrão |
+| Secret do Swarm ilegível para o usuário `node` (dono root, `0400`) | `uid: "1000"` no `stack.yml` |
+| 502 no lab04 enquanto o backend sobe | `depends_on: condition: service_healthy` |
+| Docker 29 rejeita `--name t` (1 caractere) | `--name apitest` |
+| Secret scan **não** detecta o `DD_SECRET_KEY` genérico | vira ponto de discussão no roteiro |
+
+Pendências conhecidas: os relatórios do Trivy em container saem com dono root (`sudo chown -R $USER reports/`); o banco do Trivy é baixado a cada sessão (melhoria planejada junto da palestra AppSec).
 
 ## Objetivo
 
 1. Executar todos os labs e corrigir o que falhar, **sem alterar os arquivos existentes** de `backend/`, `frontend/`, `docker-compose.yml` e `infra/` (pertencem à palestra AppSec; o único arquivo novo em `infra/` é `scripts/generate_pptx_containers.py`).
-2. Medir os números reais e substituir os valores `≈` em `roteiro-containerizacao.md` e no deck.
+2. Medir os números e atualizar as tabelas em `roteiro-containerizacao.md` (Blocos 2 e 9) e os dicts `MEASURED`/`DUEL` do gerador do PPT.
 3. Regenerar o PPT: `python infra/scripts/generate_pptx_containers.py` (requer `pip install python-pptx`).
 4. Responder em pt-BR com o relatório do que passou, do que foi corrigido e da tabela final.
 
@@ -68,7 +89,7 @@ done
 
 ### 3. Comparativo
 - [ ] `make lab-compare` gera a tabela Markdown e salva os JSONs em `reports/compare/`
-- [ ] Copiar a tabela para o **Bloco 2** de `roteiro-containerizacao.md`, substituindo os `≈`, e atualizar o placar do **Bloco 9**
+- [ ] Copiar a tabela para o **Bloco 2** de `roteiro-containerizacao.md`, com os números novos, e atualizar o placar do **Bloco 9**
 - [ ] Atualizar os mesmos números no dict `MEASURED` de `infra/scripts/generate_pptx_containers.py`
 
 ### 3b. Duelo Alpine x Distroless (abre a palestra)
@@ -78,12 +99,12 @@ done
 - [ ] Copiar a tabela para o Bloco 2 de `roteiro-containerizacao.md` (seção "O duelo") e para o dict `DUEL` do gerador do PPT
 
 ### 4. BuildKit
-- [ ] `make lab-cache`: o 2º build do lab05 é visivelmente mais rápido que o 2º do lab02. Anotar os tempos no Bloco 4
-- [ ] Ordem de camadas: adicionar um comentário em `backend/src/main.ts`, rebuildar `lab05-buildkit/Dockerfile` (npm ci `CACHED`) e `Dockerfile.bad-order` (npm ci roda). Depois: `git checkout backend/src/main.ts`
+- [ ] `make lab-cache`: tabela com o rebuild após mudar 1 linha; o `Dockerfile` (deps antes do código) bem mais rápido que o `bad-order` (última medição: 8 s × 45 s). Anotar no Bloco 4
+- [ ] `git status backend/` limpo depois da demo (o script restaura o `main.ts`)
 
 ### 5. Scan e supply chain
-- [ ] `make lab-lint`: hadolint aponta mais problemas no lab01 que no lab02
-- [ ] `make lab-scan`: gera `reports/trivy-single.html`; `trivy config` lista misconfigs; o secret scan roda
+- [ ] `make lab-lint`: roda nos dois Dockerfiles (o hadolint quase não reclama do lab01: só `DL3059`; quem pega root/HEALTHCHECK é o `trivy config`)
+- [ ] `make lab-scan`: gera `reports/trivy-single.html`; `trivy config` lista misconfigs (`DS-0002`, `DS-0026`); o secret scan roda (e não acha o `DD_SECRET_KEY`)
 - [ ] `make lab-sbom`: gera `reports/sbom-*.cdx.json`
 - [ ] Testar o wrapper **sem** o trivy nativo (`PATH` sem trivy): precisa cair no `docker run aquasec/trivy`
 

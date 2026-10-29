@@ -6,7 +6,7 @@
 > **Ambiente:** máquina do participante (Docker + make) **ou** Play with Docker
 > **Material:** [`hands-on/`](hands-on/README.md) · [`hands-on/CHEATSHEET.md`](hands-on/CHEATSHEET.md) · `reports/containerizacao-palestra.pptx`
 
-> ⚠️ **Números marcados com `≈`** são ordens de grandeza esperadas. Substitua pelos valores medidos com `make lab-compare` (ver [`hands-on/VALIDACAO.md`](hands-on/VALIDACAO.md)).
+> 📏 **Números medidos em 29/10/2026** (WSL2 Ubuntu 24.04, Docker 29.9, Trivy 0.58.1). CVEs mudam toda semana: rode `make lab-compare` e `make lab-duel` na véspera e atualize (ver [`hands-on/VALIDACAO.md`](hands-on/VALIDACAO.md)).
 
 ---
 
@@ -89,7 +89,7 @@ docker image inspect node:22-alpine -f '{{json .RootFS.Layers}}'
 | **Quay.io** | ecossistema Red Hat (Keycloak, etc.) | |
 | **Amazon ECR Public** (`public.ecr.aws`) | espelho das oficiais sem o rate limit do Hub | |
 | **Distroless** (`gcr.io/distroless`) | Google: só runtime, sem shell | |
-| **Chainguard** (`cgr.dev/chainguard`) | Wolfi, rebuild diário, ~0 CVEs | tier gratuito só com `:latest` |
+| **Chainguard** (`cgr.dev/chainguard`) | Wolfi, rebuild diário, 0 CVEs de SO | tier gratuito só com `:latest`, que hoje traz BusyBox/`sh` |
 | **Registry interno** (Harbor, Nexus, ECR, ACR, GAR, OCIR) | espelho + scan + política | é onde produção deveria buscar |
 
 **Como escolher uma imagem**
@@ -120,7 +120,7 @@ docker buildx imagetools inspect node:22-alpine    # digest + plataformas
 | `node:22-slim` | Debian mínimo | glibc | bash, apt | runtime quando precisa de glibc/apt |
 | `node:22-alpine` | Alpine | **musl** | **busybox** `sh`, `apk` | runtime pequeno com shell |
 | `distroless/nodejs22` | Debian sem userland | glibc | **nenhum** | runtime de produção |
-| `chainguard/node` | Wolfi | glibc | nenhum (variante `-dev` tem) | runtime com ~0 CVEs |
+| `chainguard/node` | Wolfi | glibc | BusyBox `sh` na `:latest` gratuita | runtime com 0 CVEs de SO |
 | `scratch` | vazio | — | nenhum | binário estático (Go, Rust) |
 
 ### Alpine: o que é diferente (ponto obrigatório)
@@ -140,10 +140,11 @@ docker buildx imagetools inspect node:22-alpine    # digest + plataformas
 - `apk add --no-cache` em vez de `apt-get`; versões de pacotes mudam rápido (pin é difícil)
 - **Regra:** builder e runtime com a **mesma libc** (ver `hands-on/lab03-base-images/Dockerfile.alpine`)
 
-### Distroless / Chainguard / scratch
+### Distroless / scratch (e o Chainguard?)
 - Sem shell = **sem `docker exec sh`**: debug com `docker debug`, imagem `:debug` ou container efêmero
 - Sem `wget`/`curl` = sem HEALTHCHECK por shell → o healthcheck vai para o orquestrador ou para o próprio binário (ver `hands-on/api-go/main.go`, flag `-healthcheck`)
 - Usuário `nonroot` (65532) já é o padrão
+- **Chainguard:** a `:latest` gratuita testada (build de 28/10/2026) **tem** BusyBox e `sh`. Entre as opções para Node, só o distroless é de fato sem shell
 
 ### Hands-on
 ```bash
@@ -152,18 +153,34 @@ make lab-compare
 docker run --rm -it --entrypoint sh handson/backend:distroless    # falha: não existe shell
 ```
 
-**Resultado esperado (`≈`, preencher com o medido):**
+**Resultado medido (`make lab-compare`):**
 
-| Imagem | Tamanho | CVEs C/H |
+| Imagem | Tamanho | Camadas | Usuário | CVEs C / H / M |
+|---|---|---|---|---|
+| `handson/backend:single` | 2.070 MB | 12 | root | 25 / 537 / 2009 |
+| `handson/backend:full` | 1.715 MB | 12 | node | 23 / 493 / 1996 |
+| `handson/backend:slim` | 477 MB | 9 | node | 2 / 91 / 125 |
+| `handson/backend:alpine` | 394 MB | 8 | node | 1 / 35 / 38 |
+| `handson/backend:distroless` | 361 MB | 23 | 65532 | 2 / 31 / 63 |
+| `handson/backend:chainguard` | 410 MB | 15 | 65532 | 1 / 25 / 28 |
+| `handson/api-go:single` | 1.375 MB | 10 | root | 3 / 146 / 818 |
+| `handson/api-go:scratch` | **9 MB** | 1 | 65532 | **0 / 0 / 0** |
+
+> O `node_modules` domina o tamanho nas imagens Node (~360–410 MB em todas as bases mínimas). A versão Go em scratch é ~40x menor.
+
+**De onde vêm as CVEs das imagens Node** (o argumento que mais surpreende):
+
+| Imagem | SO | `node_modules` |
 |---|---|---|
-| `handson/backend:full` | ≈ 1,1 GB | dezenas/centenas |
-| `handson/backend:slim` | ≈ 250 MB | poucas dezenas |
-| `handson/backend:alpine` | ≈ 200 MB | ~0–poucas |
-| `handson/backend:distroless` | ≈ 200 MB | poucas |
-| `handson/backend:chainguard` | ≈ 200 MB | ~0 |
-| `handson/api-go:scratch` | ≈ 7 MB | 0 |
+| alpine | **0** | C1 / H35: 25 da app + ~10 do **npm que já vem na `node:22-alpine`** |
+| distroless | C1 / H6 (Debian) | C1 / H25 (só a app; não traz npm) |
+| chainguard | **0** | C1 / H25 (só a app) |
+| slim | C1 / H56 | C1 / H35 |
+| full | C22 / H458 | C1 / H35 |
 
-> O `node_modules` domina o tamanho nas imagens Node. Por isso a diferença entre alpine/distroless/chainguard é pequena, e a versão Go em scratch é ~30x menor.
+> Nas bases mínimas, **a maior parte das CVEs é da sua app** (o CRITICAL é `proxy-addr`, dependência do Express), não da imagem base.
+
+**História real da validação (Go):** com `golang:1.24` (1.24.13, fora de suporte), as 4 imagens Go, **inclusive a scratch**, tinham **23 HIGH**. Era a stdlib do Go embutida no binário. Com Go 1.27: zero. **`scratch` não zera CVE se a toolchain estiver velha.**
 
 ### O duelo: Alpine x Distroless (resposta à votação da abertura)
 ```bash
@@ -173,16 +190,19 @@ O script ([`hands-on/scripts/duel.sh`](hands-on/scripts/duel.sh)) lista o filesy
 
 | | Alpine | Distroless |
 |---|---|---|
-| Tamanho | pequeno | pequeno (≈ igual com Node: `node_modules` domina) |
+| Tamanho (medido) | 394 MB | 361 MB (com Node, `node_modules` domina) |
 | libc | **musl**: módulos nativos, DNS, alocador; Node em musl é tier *experimental* | **glibc**: o binário oficial do Node, máxima compatibilidade |
 | Shell / pacotes | `sh` (BusyBox) + `apk`: ótimo para debug... **e para o atacante** | nenhum: RCE sem `sh`, `wget` ou `apk` para baixar o próximo estágio |
 | Debug | `docker exec sh` | `docker debug`, tag `:debug`, container efêmero |
 | Healthcheck | `wget` no HEALTHCHECK | probe no orquestrador ou o binário se testa |
-| CVEs | poucas; Alpine corrige rápido | herda CVEs do Debian, muitas sem correção (*unfixed*) |
+| CVEs (medido, C/H/M/L) | 1 / 35 / 38 / 4, todas de npm (0 no SO) | 2 / 31 / 63 / 30, inclui Debian com *unfixed* |
 | Versões | qualquer tag `node:X.Y-alpine` | só majors LTS (`nodejs22-debian12`) |
 | Usuário | root por padrão (`USER node` manual) | tag `:nonroot` pronta |
+| Superfície (medido) | 18.946 arquivos, 314 executáveis | 17.676 arquivos, **0** executáveis em `/bin` |
+| Tempo até `/health` | ~1,4–2,0 s | ~1,2 s |
+| Memória em uso | ~71 MiB | ~75 MiB |
 
-**Ponto da discussão:** com Node, tamanho **não decide**. A decisão é **libc + superfície de ataque + capacidade de debug**. A "terceira via" é Chainguard/Wolfi: glibc, sem shell e ~0 CVEs. Para binário estático (Go), o duelo nem existe: `scratch`/`distroless/static`.
+**Ponto da discussão:** com Node, tamanho **não decide**. A decisão é **libc + superfície de ataque + capacidade de debug**. A "terceira via" é Chainguard/Wolfi: glibc, 0 CVEs de SO e sem npm, **mas a `:latest` gratuita traz BusyBox e `sh`** (medido: `docker exec sh` funciona). Para binário estático (Go), o duelo nem existe: `scratch`/`distroless/static`.
 
 **Transição:** "Escolhemos a base. Mas vocês notaram que todos esses Dockerfiles têm dois FROM? Vamos ver por quê."
 
@@ -219,7 +239,7 @@ Comparar com o original [`backend/Dockerfile`](backend/Dockerfile) e com o front
 
 - `docker build --target builder` → imagem para rodar testes no CI com o mesmo Dockerfile
 - Stages sem dependência entre si são construídos **em paralelo** pelo BuildKit
-- Go: `make lab-go` → `handson/api-go:single` (≈ 900 MB) x `:scratch` (≈ 7 MB) é o argumento definitivo
+- Go: `make lab-go` → `handson/api-go:single` (1.375 MB, root, 146 HIGH) x `:scratch` (9 MB, 0 CVEs) é o argumento definitivo
 
 **Transição:** "Multi-stage resolve o tamanho. Agora vamos escrever o Dockerfile *bem* do começo ao fim."
 
@@ -255,10 +275,10 @@ Comparar com o original [`backend/Dockerfile`](backend/Dockerfile) e com o front
 ```bash
 make lab-cache
 ```
-- `RUN --mount=type=cache,target=/root/.npm`: o cache do gerenciador de pacotes sobrevive até a `--no-cache`
+- **Ordem das camadas** ([`cache-demo.sh`](hands-on/scripts/cache-demo.sh)): altera 1 linha de `backend/src/main.ts` e rebuilda. Medido: **8 s** (deps antes do código, `npm ci` em `CACHED`) x **45 s** (`Dockerfile.bad-order`, reinstala tudo). O script restaura o arquivo no final
+- `RUN --mount=type=cache,target=/root/.npm`: o cache do npm sobrevive até a `--no-cache`. Ganha com rede lenta ou muitas deps; **com rede rápida não mudou o tempo** (~40 s nos dois casos, o gargalo é o `tsc`)
 - `RUN --mount=type=secret,id=npmrc`: token de registry privado sem virar camada
 - `--build-context lab=...`: contexto extra nomeado (usado no `lab04-hardening/Dockerfile`)
-- Ordem de camadas ao vivo: altere um comentário em `backend/src/main.ts` e rebuilde `lab05-buildkit/Dockerfile` (npm ci em cache) x `Dockerfile.bad-order` (npm ci de novo). Depois: `git checkout backend/src/main.ts`
 - Multi-arch (demo do palestrante):
   ```bash
   docker buildx create --use --name multi
@@ -295,7 +315,8 @@ make lab-scan      # trivy image + config + secret
 make lab-sbom      # SBOM CycloneDX
 ```
 - Abrir `reports/trivy-single.html` (template do repo: `infra/trivy/html.tpl`)
-- O secret scan provavelmente acha o `DD_SECRET_KEY` do `docker-compose.yml` da palestra AppSec: ótimo gancho
+- **hadolint x `trivy config` (medido):** o hadolint quase não reclama do lab01 (só `DL3059`); quem acusa falta de USER não-root e de HEALTHCHECK é o `trivy config`. Mas o `trivy config` também acusa `DS-0002` no distroless/Chainguard, que já são nonroot pela base: falso positivo para discutir
+- **Secret scan (medido):** **não** acha o `DD_SECRET_KEY` do `docker-compose.yml` da palestra AppSec. Segredo genérico (sem prefixo conhecido como `AKIA`, `ghp_`) precisa de regra customizada ou de outra ferramenta (gitleaks). Bom gancho: "o scanner passou, então está seguro?"
 - `--ignore-unfixed` e `--exit-code 1 --severity CRITICAL` para quebrar o pipeline só no que é acionável
 - Relembrar o pipeline real: [`.github/workflows/appsec.yml`](.github/workflows/appsec.yml) (Trivy no CI + DefectDojo)
 
@@ -383,6 +404,7 @@ curl -s -X POST localhost:8080/api/bmi/calculate -H 'Content-Type: application/j
 
 make swarm-scale                     # backend 2 → 4
 make swarm-update                    # rolling update: NestJS → Go (mesmo contrato!), start-first
+                                     # medido: 237 requisições durante o update, 0 falhas
 watch docker service ps bmi_backend  # tasks antigas Shutdown, novas Running
 make swarm-rollback                  # volta para NestJS
 docker service logs bmi_backend --tail 20
@@ -391,6 +413,7 @@ make swarm-down
 ```
 - Em multi-nó: `docker node update --availability drain <nó>` e ver as tasks migrarem
 - Ler [`hands-on/lab07-swarm/stack.yml`](hands-on/lab07-swarm/stack.yml): `update_config`, `failure_action: rollback`, `resources`, `secrets`
+- Pegadinha real da validação: o secret é montado com dono root e modo `0400`, e o backend roda como `node` → `Permission denied`. Por isso o stack declara `uid: "1000"`
 
 > O rolling update troca a implementação (Node → Go) sem downtime porque as duas respeitam o mesmo contrato HTTP e o mesmo healthcheck. Esse é o argumento para APIs com contrato bem definido.
 
@@ -402,7 +425,7 @@ make swarm-down
 > "Depois de tudo: Alpine ou distroless?" Compare com o placar da abertura e peça para quem mudou de lado explicar o motivo.
 
 ### Recapitulando o placar
-Projete a tabela final do `make lab-compare`: de `single` (≈ 1,2 GB, root, centenas de CVEs) a `api-go:scratch` (≈ 7 MB, não-root, 0 CVEs).
+Projete a tabela final do `make lab-compare`: de `backend:single` (2.070 MB, root, 25 CRITICAL e 537 HIGH) a `api-go:scratch` (9 MB, não-root, 0 CVEs).
 
 ### Próximos passos
 - Levar o checklist do bloco 4 para os Dockerfiles do time
