@@ -11,6 +11,21 @@ DOJO_TOKEN="${DOJO_TOKEN:-}"
 DOJO_PRODUCT_NAME="${DOJO_PRODUCT_NAME:-BMI AppSec}"
 DOJO_ENG_TRIVY="${DOJO_ENG_TRIVY:-}"
 IMPORT_DOJO="${1:-}"
+ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+
+# Sem binário nativo: roda a imagem oficial com o mesmo volume de cache dos labs
+# (hands-on/scripts/trivy.sh), para o banco de vulnerabilidades ser baixado uma vez só.
+# TRIVY_SKIP_DB_UPDATE=true usa o banco já em cache, sem ir à internet.
+if ! command -v trivy >/dev/null 2>&1; then
+  trivy() {
+    docker run --rm \
+      -v /var/run/docker.sock:/var/run/docker.sock \
+      -v trivy-cache:/root/.cache/trivy \
+      -v "$ROOT_DIR:$ROOT_DIR" -w "$ROOT_DIR" \
+      -e TRIVY_SKIP_DB_UPDATE -e TRIVY_SKIP_JAVA_DB_UPDATE -e TRIVY_DB_REPOSITORY \
+      "${TRIVY_IMAGE:-aquasec/trivy:0.58.1}" "$@"
+  }
+fi
 
 mkdir -p "$REPORTS_DIR"
 
