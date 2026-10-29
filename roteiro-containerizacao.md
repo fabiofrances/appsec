@@ -52,7 +52,8 @@
 
 ### Hands-on
 ```bash
-make lab-prepull        # ideal: pedido por e-mail antes da aula
+make lab-prepull        # imagens base + banco do Trivy; ideal: pedido por e-mail antes da aula
+export TRIVY_SKIP_DB_UPDATE=true   # durante a aula: Trivy usa o banco em cache, sem internet
 ```
 
 **Transição:** "Antes de escrever Dockerfile, vamos entender do que uma imagem é feita e de onde ela vem."
@@ -144,6 +145,7 @@ docker buildx imagetools inspect node:22-alpine    # digest + plataformas
 - Sem shell = **sem `docker exec sh`**: debug com `docker debug`, imagem `:debug` ou container efêmero
 - Sem `wget`/`curl` = sem HEALTHCHECK por shell → o healthcheck vai para o orquestrador ou para o próprio binário (ver `hands-on/api-go/main.go`, flag `-healthcheck`)
 - Usuário `nonroot` (65532) já é o padrão
+- **Por que `65532` e não `app`?** No `scratch` não existe `/etc/passwd` para traduzir nome em uid; o Kubernetes com `runAsNonRoot` só valida uid numérico; e 65532 é a convenção do distroless/Chainguard (alto, não colide com o host). Onde há `/etc/passwd`, o melhor dos dois mundos: **nome para humanos, número no `USER`** (ver `hands-on/api-go/Dockerfile.alpine`: `id` mostra `uid=65532(app)`)
 - **Chainguard:** a `:latest` gratuita testada (build de 28/10/2026) **tem** BusyBox e `sh`. Entre as opções para Node, só o distroless é de fato sem shell
 
 ### Hands-on
@@ -289,7 +291,7 @@ make lab-cache
 
 ## Intervalo (5 min)
 
-Deixe rodando durante o intervalo: `make lab-scan` (o primeiro download do banco do Trivy demora).
+Deixe rodando durante o intervalo: `make lab-scan`. Se o banco do Trivy foi aquecido no `lab-prepull` e `TRIVY_SKIP_DB_UPDATE=true` está exportado, não há download (o `make trivy` da palestra AppSec usa o mesmo cache).
 
 ---
 
@@ -446,7 +448,7 @@ Sugestões para puxar o debate:
 | Problema | Saída |
 |---|---|
 | Rede lenta / rate limit do Docker Hub | imagens pré-baixadas (`make lab-prepull` na véspera), `docker save`/`docker load` via pendrive, espelho `public.ecr.aws/docker/library/node` |
-| Trivy demorando no 1º download do DB | rodar `make lab-scan` no intervalo; ter `reports/` pré-gerado |
+| Trivy baixando o banco (~80 MB) ou rate limit | `make lab-trivy-db` antes da aula + `export TRIVY_SKIP_DB_UPDATE=true`; sem rede: `make lab-trivy-db-save` na véspera (gera `reports/trivy-db.tgz`, 131 MB) e `make lab-trivy-db-load` na máquina do participante |
 | Participante sem Docker | Play with Docker (sessão de 4 h) |
 | PWD sem buildx multi-arch / sem `docker debug` | só demo do palestrante |
 | Swarm multi-nó falhando | single-node (`REGISTRY` vazio) cobre todos os comandos, exceto o drain |

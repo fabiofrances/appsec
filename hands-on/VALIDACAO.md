@@ -24,7 +24,7 @@ Todos os labs passaram (itens 0 a 7; o 8 multi-nó e o 9 regressão AppSec não 
 | Docker 29 rejeita `--name t` (1 caractere) | `--name apitest` |
 | Secret scan **não** detecta o `DD_SECRET_KEY` genérico | vira ponto de discussão no roteiro |
 
-Pendências conhecidas: os relatórios do Trivy em container saem com dono root (`sudo chown -R $USER reports/`); o banco do Trivy é baixado a cada sessão (melhoria planejada junto da palestra AppSec).
+Pendência conhecida: os relatórios do Trivy em container saem com dono root (`sudo chown -R $USER reports/`). O banco do Trivy passou a ser compartilhado (volume `trivy-cache`) e aquecido no `lab-prepull`.
 
 ## Objetivo
 
