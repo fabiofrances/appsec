@@ -14,7 +14,7 @@ import os
 from pptx import Presentation
 from pptx.chart.data import CategoryChartData
 from pptx.dml.color import RGBColor
-from pptx.enum.chart import XL_CHART_TYPE, XL_LABEL_POSITION
+from pptx.enum.chart import XL_CHART_TYPE, XL_LABEL_POSITION, XL_LEGEND_POSITION
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.util import Inches, Pt
@@ -42,7 +42,7 @@ DUEL = {
     "Executáveis em /bin": ("314", "0"),
     "Shell / pacotes": ("sh + apk", "nenhum"),
     "libc": ("musl", "glibc"),
-    "CVEs CRITICAL / HIGH": ("1 / 35 (0 no SO)", "2 / 31"),
+    "CVEs C / H (antes → depois)": ("1/35 → 0/14", "2/31 → 1/10"),
     "docker exec sh": ("funciona", "falha"),
 }
 
@@ -519,6 +519,53 @@ text(s, 0.6, 5.55, 12.1, 0.9, [[("Nas bases mínimas, ", {}),
                                 (", não da imagem base.", {})]], size=19)
 
 # ═════════════════════════════════════════════════════════════════════════════
+# 10c — Antes × depois: atualizar dependências (PR #5)
+# ═════════════════════════════════════════════════════════════════════════════
+s = new_slide("Mesmo Dockerfile, mesma base: só o package-lock.json mudou (npm audit fix, PR #5). As CVEs "
+              "CRITICAL+HIGH caem de 36 para 14 no alpine e de 26 para 4 no que é da app. O CRITICAL do "
+              "proxy-addr sumiu. E o contraponto: a imagem full, parada, piorou de 458 para 602 HIGH no SO em "
+              "duas semanas. Ressalva: o scanner também mudou (Trivy 0.58 → 0.76), vale a ordem de grandeza.")
+title(s, "Antes × depois: atualizar as dependências", "Bloco 2 · npm audit fix")
+cd = CategoryChartData()
+cd.categories = ["alpine", "distroless", "chainguard", "só a app"]
+cd.add_series("antes (29/10)", (1 + 35, 2 + 31, 1 + 25, 1 + 25))
+cd.add_series("depois (11/11)", (0 + 14, 1 + 10, 0 + 4, 0 + 4))
+rect(s, 0.6, 1.65, 7.6, 4.95, CARD)
+text(s, 0.9, 1.8, 7.0, 0.45, "CVEs CRITICAL + HIGH", size=17, bold=True)
+ch = s.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED, Inches(0.75), Inches(2.3),
+                        Inches(7.3), Inches(4.2), cd).chart
+ch.font.size = Pt(13)
+ch.font.name = FONT
+ch.font.color.rgb = MUTED
+ch.has_title = False
+ch.has_legend = True
+ch.legend.include_in_layout = False
+ch.legend.position = XL_LEGEND_POSITION.TOP
+ch.legend.font.color.rgb = WHITE
+ch.legend.font.size = Pt(13)
+plot = ch.plots[0]
+plot.gap_width = 70
+plot.overlap = -10
+plot.has_data_labels = True
+plot.data_labels.position = XL_LABEL_POSITION.OUTSIDE_END
+plot.data_labels.font.size = Pt(14)
+plot.data_labels.font.bold = True
+plot.data_labels.font.color.rgb = WHITE
+for series, color in zip(plot.series, (AMBER, TEAL)):
+    series.format.fill.solid()
+    series.format.fill.fore_color.rgb = color
+ch.value_axis.visible = False
+ch.value_axis.has_major_gridlines = False
+ch.category_axis.format.line.color.rgb = CARD
+ch.category_axis.tick_labels.font.color.rgb = WHITE
+card(s, 8.5, 1.65, 4.25, 2.35, "Só mudou o lock", ["36 → 14 no alpine", "26 → 4 na app"], color=TEAL,
+     mark="✓")
+card(s, 8.5, 4.25, 4.25, 2.35, "Imagem parada", ["full: 458 → 602 HIGH", "no SO, em 2 semanas"],
+     color=CORAL, mark="!")
+text(s, 0.6, 6.72, 12.1, 0.4, "Trivy 0.58 (29/10) × 0.76 (11/11): vale a ordem de grandeza",
+     size=12, color=MUTED)
+
+# ═════════════════════════════════════════════════════════════════════════════
 # 11 — Single x multi-stage
 # ═════════════════════════════════════════════════════════════════════════════
 s = new_slide("Rode make lab-single lab-multi primeiro. docker run handson/backend:single whoami → root. "
@@ -793,11 +840,12 @@ lab(s, "make swarm-init swarm-deploy swarm-update")
 # ═════════════════════════════════════════════════════════════════════════════
 # 22b — A jornada: quanto cada técnica enxuga
 # ═════════════════════════════════════════════════════════════════════════════
-JOURNEY = [  # (degrau, MB, CVEs CRITICAL+HIGH) — make lab-compare
-    ("1. single-stage", MEASURED["backend:single"], 25 + 537),
+JOURNEY = [  # (degrau, MB, CVEs CRITICAL+HIGH) — make lab-compare (29/10; degrau 4 em 11/11)
+    ("1. single", MEASURED["backend:single"], 25 + 537),
     ("2. multi-stage", MEASURED["backend:alpine"], 1 + 35),
     ("3. distroless", MEASURED["backend:distroless"], 2 + 31),
-    ("4. Go + scratch", MEASURED["api-go:scratch"], 0),
+    ("4. + deps", 364, 1 + 10),
+    ("5. Go scratch", MEASURED["api-go:scratch"], 0),
 ]
 
 
@@ -813,7 +861,7 @@ def journey_chart(s, x, y, w, h, values, number_format):
     ch.font.name = FONT
     ch.font.color.rgb = MUTED
     plot = ch.plots[0]
-    plot.gap_width = 60
+    plot.gap_width = 50
     plot.has_data_labels = True
     dl = plot.data_labels
     dl.number_format = number_format
@@ -832,13 +880,14 @@ def journey_chart(s, x, y, w, h, values, number_format):
     ca = ch.category_axis
     ca.format.line.color.rgb = CARD
     ca.tick_labels.font.color.rgb = WHITE
-    ca.tick_labels.font.size = Pt(13)
+    ca.tick_labels.font.size = Pt(12)
 
 
 s = new_slide("O resumo da aula num slide: cada técnica é um degrau. Multi-stage com alpine já corta 81% "
-              "do tamanho e 94% das CVEs críticas e altas; distroless tira o shell; e o binário estático em "
+              "do tamanho e 94% das CVEs críticas e altas; distroless tira o shell; atualizar as dependências "
+              "(npm audit fix) leva a 11; e o binário estático em "
               "scratch chega a 9 MB e zero CVEs. Volte à votação: o que mais pesou não foi a base, foi "
-              "o multi-stage e o que vai dentro da imagem.")
+              "o multi-stage e manter o que vai dentro da imagem atualizado.")
 title(s, "Quanto cada técnica enxuga", "Encerramento · a jornada")
 start_mb, start_cve = JOURNEY[0][1], JOURNEY[0][2]
 end_mb = JOURNEY[-1][1]
@@ -855,7 +904,7 @@ for i, (label, value, color) in enumerate([
                   [mb for _, mb, _ in JOURNEY] if i == 0 else [cve for *_, cve in JOURNEY],
                   "#,##0")
 text(s, 0.6, 6.7, 12.1, 0.45, [[("Mesma API, mesmo contrato HTTP. ", {"bold": True}),
-                                ("Só mudou a forma de construir a imagem.", {"color": MUTED})]],
+                                ("Mudaram só a forma de construir e as dependências.", {"color": MUTED})]],
      size=16)
 
 # ═════════════════════════════════════════════════════════════════════════════
