@@ -26,9 +26,11 @@
     "@nestjs/swagger": "^11.3.2",
     "@nestjs/terminus": "^11.1.1",
     "@opentelemetry/api": "^1.9.1",
-    "@opentelemetry/auto-instrumentations-node": "^0.75.0",
     "@opentelemetry/exporter-prometheus": "^0.217.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.217.0",
+    "@opentelemetry/instrumentation-express": "^0.65.0",
+    "@opentelemetry/instrumentation-http": "^0.217.0",
+    "@opentelemetry/instrumentation-nestjs-core": "^0.63.0",
     "@opentelemetry/sdk-node": "^0.217.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
@@ -85,6 +87,7 @@
     "@opentelemetry/otlp-transformer": {
       "protobufjs": "^8.0.2"
     },
-    "@opentelemetry/propagator-jaeger": "^2.9.0"
+    "@opentelemetry/propagator-jaeger": "^2.9.0",
+    "@opentelemetry/core": "^2.8.0"
   }
 }
