@@ -7,6 +7,8 @@ RUN npm run build
 
 FROM node:22-alpine AS production
 WORKDIR /app
+# zlib 1.3.2-r1 da base tem CVE-2026-4738; 1.4-r0 já está no Alpine (remover quando a base atualizar)
+RUN apk upgrade --no-cache zlib
 ENV NODE_ENV=production
 COPY package*.json ./
 # npm/npx/corepack vêm na imagem base mas não são usados em runtime: removê-los tira
