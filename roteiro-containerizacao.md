@@ -6,7 +6,7 @@
 > **Ambiente:** máquina do participante (Docker + make) **ou** Play with Docker
 > **Material:** [`hands-on/`](hands-on/README.md) · [`hands-on/CHEATSHEET.md`](hands-on/CHEATSHEET.md) · `reports/containerizacao-palestra.pptx`
 
-> 📏 **Números medidos em 29/10/2026** (WSL2 Ubuntu 24.04, Docker 29.9, Trivy 0.58.1). CVEs mudam toda semana: rode `make lab-compare` e `make lab-duel` na véspera e atualize (ver [`hands-on/VALIDACAO.md`](hands-on/VALIDACAO.md)).
+> 📏 **Números medidos em 29/10/2026** (WSL2 Ubuntu 24.04, Docker 29.9, Trivy 0.58.1), **antes** da atualização de dependências do backend (PR #5). A comparação **antes × depois** (11/11/2026) está no Bloco 2. CVEs mudam toda semana: rode `make lab-compare` e `make lab-duel` na véspera e atualize (ver [`hands-on/VALIDACAO.md`](hands-on/VALIDACAO.md)).
 
 ---
 
@@ -184,6 +184,23 @@ docker run --rm -it --entrypoint sh handson/backend:distroless    # falha: não 
 
 **História real da validação (Go):** com `golang:1.24` (1.24.13, fora de suporte), as 4 imagens Go, **inclusive a scratch**, tinham **23 HIGH**. Era a stdlib do Go embutida no binário. Com Go 1.27: zero. **`scratch` não zera CVE se a toolchain estiver velha.**
 
+### Antes × depois: atualizar as dependências da app
+
+Entre as duas medições, o backend recebeu um `npm audit fix` (PR #5, sem `--force`): só o `package-lock.json` mudou, sem tocar em Dockerfile nem em imagem base.
+
+| Imagem | CVEs C / H **antes** (29/10) | CVEs C / H **depois** (11/11) |
+|---|---|---|
+| `backend:alpine` / `multi` | 1 / 35 | **0 / 14** |
+| `backend:distroless` | 2 / 31 | **1 / 10** (o C e 6 H são do Debian) |
+| `backend:chainguard` | 1 / 25 | **0 / 4** |
+| só a app (`node_modules`) | 1 / 25 | **0 / 4** |
+| `backend:full` | 23 / 493 | 20 / 616 ⚠️ |
+| `backend:single` | 25 / 537 | 22 / 660 ⚠️ |
+
+- **Atualizar as dependências derrubou mais CVEs do que trocar a imagem base.** O CRITICAL do `proxy-addr` sumiu; o que resta na app são pacotes `@opentelemetry/*`, que exigem `npm audit fix --force` (salto de versão 0.x) e ficam para um PR próprio
+- ⚠️ **Imagem parada envelhece:** `full` e `single` **pioraram** (SO de 458 → 602 HIGH) sem nenhuma mudança no Dockerfile. São CVEs novas do Debian publicadas em duas semanas. Por isso o "rebuild contínuo" do Bloco 5
+- Ressalva honesta: o scanner também mudou (Trivy 0.58.1 em container → 0.76.2 nativo) e o banco é de outra data. A comparação vale pela ordem de grandeza, não pela unidade
+
 ### O duelo: Alpine x Distroless (resposta à votação da abertura)
 ```bash
 make lab-duel                    # alpine x distroless x chainguard, mesma app
@@ -326,7 +343,8 @@ make lab-sbom      # SBOM CycloneDX
 - **Pin por digest** + Renovate/Dependabot para atualizar via PR
 - **SBOM**: "lista de ingredientes"; dá para reescanear sem a imagem (`trivy sbom`)
 - **Assinatura** com cosign e verificação na admissão (opcional: [`hands-on/lab06-supply-chain/README.md`](hands-on/lab06-supply-chain/README.md))
-- **Rebuild frequente**: CVE corrigido na base só chega até você se você rebuildar
+- **Rebuild frequente**: CVE corrigido na base só chega até você se você rebuildar; e a imagem parada piora sozinha (a `full` foi de 458 → 602 HIGH no SO em duas semanas)
+- **Atualize as dependências da app**: no backend, um `npm audit fix` levou as CVEs de 1/35 → 0/14 (C/H) na imagem alpine; ver Bloco 2
 
 **Transição:** "Imagem limpa é metade do caminho. A outra metade é *como* ela roda."
 
@@ -429,16 +447,17 @@ make swarm-down
 ### Recapitulando o placar
 Projete a tabela final do `make lab-compare`: de `backend:single` (2.070 MB, root, 25 CRITICAL e 537 HIGH) a `api-go:scratch` (9 MB, não-root, 0 CVEs).
 
-**Slide "Quanto cada técnica enxuga"**: a jornada em 4 degraus, com a mesma API e o mesmo contrato HTTP:
+**Slide "Quanto cada técnica enxuga"**: a jornada em 5 degraus, com a mesma API e o mesmo contrato HTTP:
 
 | Degrau | Tamanho | CVEs CRITICAL + HIGH |
 |---|---|---|
 | 1. single-stage (`node:22`, root) | 2.070 MB | 562 |
 | 2. multi-stage (alpine) | 394 MB (**−81%**) | 36 (**−94%**) |
 | 3. distroless | 361 MB | 33 |
-| 4. Go + scratch | **9 MB (−99,6%)** | **0** |
+| 4. + deps atualizadas (`npm audit fix`) | 364 MB | 11 (**−98%** desde o início) |
+| 5. Go + scratch | **9 MB (−99,6%)** | **0** |
 
-> O degrau que mais pesa é o **multi-stage**, não a escolha da base. Use isso para fechar o debate da votação.
+> Os degraus que mais pesam são o **multi-stage** e **atualizar as dependências**, não a escolha da base. Use isso para fechar o debate da votação.
 
 ### Próximos passos
 - Levar o checklist do bloco 4 para os Dockerfiles do time

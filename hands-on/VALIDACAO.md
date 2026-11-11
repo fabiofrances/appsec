@@ -24,6 +24,8 @@ Todos os labs passaram (itens 0 a 7; o 8 multi-nó e o 9 regressão AppSec não 
 | Docker 29 rejeita `--name t` (1 caractere) | `--name apitest` |
 | Secret scan **não** detecta o `DD_SECRET_KEY` genérico | vira ponto de discussão no roteiro |
 
+**Remedição — 11/11/2026** (após o `npm audit fix` do backend, PR #5; Trivy 0.76.2 nativo): CVEs C/H nas bases mínimas caíram de 1/35 → 0/14 (alpine), 2/31 → 1/10 (distroless), 1/25 → 0/4 (chainguard); `full`/`single` pioraram no SO (458 → 602 HIGH) por envelhecimento. Tabelas no Bloco 2 do roteiro. Atenção: com Trivy nativo instalado, relatórios antigos gravados como root pelo Trivy em container dão `permission denied`, o que se resolve com `sudo chown -R $USER reports/`.
+
 Pendência conhecida: os relatórios do Trivy em container saem com dono root (`sudo chown -R $USER reports/`). O banco do Trivy passou a ser compartilhado (volume `trivy-cache`) e aquecido no `lab-prepull`.
 
 ## Objetivo
