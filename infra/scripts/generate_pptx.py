@@ -471,6 +471,52 @@ for i, (num, step, color) in enumerate([
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# Slide 10b — Gitleaks (Secrets)
+# ═══════════════════════════════════════════════════════════════════════════════
+s10 = slide()
+header(s10, "Gitleaks — Secrets",
+       "Segredos commitados — em todo o histórico do git, não só no código atual", YELLOW)
+
+box(s10, 0.4, 1.35, 5.8, 5.8, BG2)
+txt(s10, "🔑  O que encontra?", 0.65, 1.45, 5.3, 0.5, size=18, bold=True, color=YELLOW)
+
+for i, item in enumerate([
+    "☁️  Chaves de nuvem (AWS, GCP, Azure)",
+    "🐙  Tokens de GitHub, Slack, Stripe...",
+    "🔐  Chaves privadas e senhas em configs",
+    "🧩  Segredo genérico (generic-api-key)",
+    "🕰️  Segredo apagado: continua no histórico",
+    "🙈  --redact: o valor nunca vai para o log",
+]):
+    txt(s10, item, 0.65, 2.1 + i * 0.65, 5.3, 0.55, size=14, color=WHITE)
+
+# Caso real deste repositório
+box(s10, 6.5, 1.35, 6.5, 3.2, BG2)
+txt(s10, "🔎  Caso real: DD_SECRET_KEY", 6.75, 1.45, 6.0, 0.5, size=18, bold=True, color=YELLOW)
+txt(s10, "O mesmo segredo de laboratório no docker-compose.yml,\npassado pelos dois scanners:",
+    6.75, 2.0, 6.1, 0.75, size=13, color=LGRAY)
+for i, (item, color) in enumerate([
+    ("Trivy (secret scan): não encontra", RED),
+    ("Gitleaks: encontra, em 2 commits (generic-api-key)", GREEN),
+    ("Aceito no .gitleaksignore com justificativa", ORANGE),
+    ("Cobertura de scanner também se valida", LGRAY),
+]):
+    txt(s10, f"  • {item}", 6.75, 2.82 + i * 0.44, 6.1, 0.38, size=13, color=color)
+
+# Pipeline position
+box(s10, 6.5, 4.75, 6.5, 2.4, BG2)
+txt(s10, "🔄  Onde entra no pipeline?", 6.75, 4.85, 6.0, 0.5, size=16, bold=True, color=WHITE)
+for i, (num, step, color) in enumerate([
+    ("1", "Checkout com histórico completo (fetch-depth 0)", WHITE),
+    ("2", "gitleaks git gera SARIF e JSON (--redact)",       WHITE),
+    ("3", "SARIF no Code scanning, JSON no DefectDojo",      WHITE),
+    ("4", "Segredo novo = merge bloqueado",                  GREEN),
+]):
+    pill(s10, num, 6.65, 5.42 + i * 0.46, DGRAY, size=11)
+    txt(s10, step, 7.15, 5.42 + i * 0.46, 5.6, 0.38, size=13, color=color)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # Slide 10 — Trivy
 # ═══════════════════════════════════════════════════════════════════════════════
 s10 = slide()
