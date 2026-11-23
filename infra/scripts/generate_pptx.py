@@ -384,31 +384,34 @@ for i, (fname, desc) in enumerate([
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Slide 9 — AppSec Overview (SAST + SCA + Container + DAST → DefectDojo)
+# Slide 9 — AppSec Overview (SAST + Secrets + SCA + Container + DAST → DefectDojo)
 # ═══════════════════════════════════════════════════════════════════════════════
 s9 = slide()
 header(s9, "Etapa 4 — AppSec", "Ferramentas de segurança integradas ao pipeline", RED)
 
 scan_tools = [
     ("🔍", "Semgrep",    "SAST",           "Análise estática\ndo código fonte",            RGBColor(0xCB, 0x6E, 0x17)),
+    ("🔑", "Gitleaks",   "Secrets",        "Segredos em todo\no histórico do git",          YELLOW),
     ("📦", "Dep. Check", "SCA",            "Dependências\nvulneráveis (NVD)",              ORANGE),
     ("🐳", "Trivy",      "Container Scan", "CVEs nas\nimagens Docker",                     BLUE),
     ("⚡", "OWASP ZAP", "DAST",           "Vulnerabilidades\nHTTP em runtime",             RED),
 ]
+CARD_W, CARD_STEP = 2.4, 2.55
 for i, (icon, name, type_, desc, color) in enumerate(scan_tools):
-    x = 0.3 + i * 3.22
-    box(s9, x, 1.45, 3.05, 4.1, BG2)
-    box(s9, x, 1.45, 3.05, 0.06, color)
-    txt(s9, icon,  x,        1.55, 3.05, 1.05, size=46, align=PP_ALIGN.CENTER)
-    txt(s9, name,  x,        2.6,  3.05, 0.52, size=18, bold=True, align=PP_ALIGN.CENTER)
-    pill(s9, type_, x + 0.45, 3.2, color, size=11)
-    txt(s9, desc,  x + 0.1,  3.72, 2.85, 1.0, size=12, color=LGRAY, align=PP_ALIGN.CENTER)
-    if i < 3:
-        txt(s9, "→", x + 3.0, 3.0, 0.25, 0.42, size=18, color=LGRAY, align=PP_ALIGN.CENTER)
+    x = 0.3 + i * CARD_STEP
+    box(s9, x, 1.45, CARD_W, 4.1, BG2)
+    box(s9, x, 1.45, CARD_W, 0.06, color)
+    txt(s9, icon,  x,        1.55, CARD_W, 1.05, size=46, align=PP_ALIGN.CENTER)
+    txt(s9, name,  x,        2.6,  CARD_W, 0.52, size=18, bold=True, align=PP_ALIGN.CENTER)
+    pill_w = max(len(type_) * 0.115 + 0.35, 1.0)  # mesma largura que pill() calcula
+    pill(s9, type_, x + (CARD_W - pill_w) / 2, 3.2, color, fg=BG if color == YELLOW else WHITE, size=11)
+    txt(s9, desc,  x + 0.1,  3.72, CARD_W - 0.2, 1.0, size=12, color=LGRAY, align=PP_ALIGN.CENTER)
+    if i < len(scan_tools) - 1:
+        txt(s9, "→", x + CARD_W - 0.05, 3.0, 0.25, 0.42, size=16, color=LGRAY, align=PP_ALIGN.CENTER)
 
 # Arrows pointing down to DefectDojo
-for i in range(4):
-    x = 0.3 + i * 3.22 + 1.3
+for i in range(len(scan_tools)):
+    x = 0.3 + i * CARD_STEP + CARD_W / 2 - 0.22
     txt(s9, "↓", x, 5.6, 0.45, 0.45, size=18, color=LGRAY, align=PP_ALIGN.CENTER)
 
 # DefectDojo as aggregator below
@@ -462,6 +465,52 @@ for i, (num, step, color) in enumerate([
     ("2", "semgrep scan gera SARIF e JSON",               WHITE),
     ("3", "SARIF no Code scanning, JSON no DefectDojo",   WHITE),
     ("4", "ERROR = merge bloqueado (check obrigatório)",  GREEN),
+]):
+    pill(s10, num, 6.65, 5.42 + i * 0.46, DGRAY, size=11)
+    txt(s10, step, 7.15, 5.42 + i * 0.46, 5.6, 0.38, size=13, color=color)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Slide 10b — Gitleaks (Secrets)
+# ═══════════════════════════════════════════════════════════════════════════════
+s10 = slide()
+header(s10, "Gitleaks — Secrets",
+       "Segredos commitados — em todo o histórico do git, não só no código atual", YELLOW)
+
+box(s10, 0.4, 1.35, 5.8, 5.8, BG2)
+txt(s10, "🔑  O que encontra?", 0.65, 1.45, 5.3, 0.5, size=18, bold=True, color=YELLOW)
+
+for i, item in enumerate([
+    "☁️  Chaves de nuvem (AWS, GCP, Azure)",
+    "🐙  Tokens de GitHub, Slack, Stripe...",
+    "🔐  Chaves privadas e senhas em configs",
+    "🧩  Segredo genérico (generic-api-key)",
+    "🕰️  Segredo apagado: continua no histórico",
+    "🙈  --redact: o valor nunca vai para o log",
+]):
+    txt(s10, item, 0.65, 2.1 + i * 0.65, 5.3, 0.55, size=14, color=WHITE)
+
+# Caso real deste repositório
+box(s10, 6.5, 1.35, 6.5, 3.2, BG2)
+txt(s10, "🔎  Caso real: DD_SECRET_KEY", 6.75, 1.45, 6.0, 0.5, size=18, bold=True, color=YELLOW)
+txt(s10, "O mesmo segredo de laboratório no docker-compose.yml,\npassado pelos dois scanners:",
+    6.75, 2.0, 6.1, 0.75, size=13, color=LGRAY)
+for i, (item, color) in enumerate([
+    ("Trivy (secret scan): não encontra", RED),
+    ("Gitleaks: encontra, em 2 commits (generic-api-key)", GREEN),
+    ("Aceito no .gitleaksignore com justificativa", ORANGE),
+    ("Cobertura de scanner também se valida", LGRAY),
+]):
+    txt(s10, f"  • {item}", 6.75, 2.82 + i * 0.44, 6.1, 0.38, size=13, color=color)
+
+# Pipeline position
+box(s10, 6.5, 4.75, 6.5, 2.4, BG2)
+txt(s10, "🔄  Onde entra no pipeline?", 6.75, 4.85, 6.0, 0.5, size=16, bold=True, color=WHITE)
+for i, (num, step, color) in enumerate([
+    ("1", "Checkout com histórico completo (fetch-depth 0)", WHITE),
+    ("2", "gitleaks git gera SARIF e JSON (--redact)",       WHITE),
+    ("3", "SARIF no Code scanning, JSON no DefectDojo",      WHITE),
+    ("4", "Segredo novo = merge bloqueado",                  GREEN),
 ]):
     pill(s10, num, 6.65, 5.42 + i * 0.46, DGRAY, size=11)
     txt(s10, step, 7.15, 5.42 + i * 0.46, 5.6, 0.38, size=13, color=color)
