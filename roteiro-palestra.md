@@ -204,6 +204,8 @@ git push
        │
        ├──► SAST — Semgrep (análise estática do código, SARIF no Code scanning)
        │
+       ├──► Secrets — Gitleaks (segredos em todo o histórico do git)
+       │
        ├──► SCA  — OWASP Dependency Check (CVEs nas libs)
        │
        ├──► Container Scan — Trivy (CVEs nas imagens Docker)

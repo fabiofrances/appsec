@@ -1,0 +1,13 @@
+# Achados do Gitleaks aceitos de propósito (fingerprint = commit:arquivo:regra:linha).
+# Qualquer segredo novo, fora desta lista, reprova o job "Secrets (Gitleaks)".
+
+# DD_SECRET_KEY do DefectDojo no docker-compose.yml: SOMENTE laboratório local, público
+# de propósito para a demo (ver README). É também o exemplo da palestra de segredo genérico
+# que o secret scan do Trivy não detecta e o Gitleaks detecta.
+ca7bd93882939cb2d3109fa43a0034c98c726abb:docker-compose.yml:generic-api-key:79
+ca7bd93882939cb2d3109fa43a0034c98c726abb:docker-compose.yml:generic-api-key:106
+ca7bd93882939cb2d3109fa43a0034c98c726abb:docker-compose.yml:generic-api-key:118
+1120ccee791d3df6e950943ff09741081d7f55c5:docker-compose.yml:generic-api-key:56
+
+# Falso positivo: URL de exemplo de badge (token=abc123def456) que veio do template do NestJS.
+5aa5d1782845a1e9438a85c54a4ef7920a626981:backend/README.md:generic-api-key:5

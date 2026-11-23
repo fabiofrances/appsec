@@ -497,9 +497,13 @@ O arquivo `.github/workflows/appsec.yml` executa automaticamente em push/PR para
 | Job | Ferramenta | Ação |
 |-----|-----------|------|
 | `test` | Jest + Vitest | Valida que nenhum teste quebrou |
-| `dependency-check` | OWASP Dep. Check | SCA das dependências npm |
-| `trivy` | Trivy | Scan das imagens backend e frontend |
-| `zap` | OWASP ZAP | DAST contra o stack completo |
+| `sast` | Semgrep | SAST; reprova em achado de severidade ERROR |
+| `secrets` | Gitleaks | Segredos em todo o histórico do git; reprova em segredo fora do `.gitleaksignore` |
+| `dependency-check` | OWASP Dep. Check + npm audit | SCA; reprova em HIGH/CRITICAL em dependência de produção |
+| `trivy` | Trivy | Scan das imagens backend e frontend; reprova em HIGH/CRITICAL com correção |
+| `zap` | OWASP ZAP | DAST contra o stack completo; reprova em regra FAIL |
+
+SAST e Secrets publicam SARIF na aba **Security → Code scanning**. As actions são fixadas por SHA e atualizadas pelo Dependabot.
 
 Todos os relatórios são salvos como artefatos no GitHub Actions e importados no DefectDojo quando os secrets `DEFECTDOJO_URL`, `DEFECTDOJO_TOKEN`, `DEFECTDOJO_ENG_TRIVY`, `DEFECTDOJO_ENG_DEPCHECK` e `DEFECTDOJO_ENG_ZAP` estiverem configurados.
 
