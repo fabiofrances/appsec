@@ -335,7 +335,7 @@ make lab-sbom      # SBOM CycloneDX
 ```
 - Abrir `reports/trivy-single.html` (template do repo: `infra/trivy/html.tpl`)
 - **hadolint x `trivy config` (medido):** o hadolint quase não reclama do lab01 (só `DL3059`); quem acusa falta de USER não-root e de HEALTHCHECK é o `trivy config`. Mas o `trivy config` também acusa `DS-0002` no distroless/Chainguard, que já são nonroot pela base: falso positivo para discutir
-- **Secret scan (medido):** **não** acha o `DD_SECRET_KEY` do `docker-compose.yml` da palestra AppSec. Segredo genérico (sem prefixo conhecido como `AKIA`, `ghp_`) precisa de regra customizada ou de outra ferramenta (gitleaks). Bom gancho: "o scanner passou, então está seguro?"
+- **Secret scan (medido):** **não** acha o `DD_SECRET_KEY` do `docker-compose.yml` da palestra AppSec. Segredo genérico (sem prefixo conhecido como `AKIA`, `ghp_`) precisa de regra customizada ou de outra ferramenta. Bom gancho: "o scanner passou, então está seguro?" **E a resposta está no pipeline:** o job `Secrets (Gitleaks)` acha o `DD_SECRET_KEY` em todo o histórico do git (regra `generic-api-key`, 2 commits). Como é segredo de laboratório, ele entra no `.gitleaksignore` com fingerprint e justificativa; qualquer segredo novo reprova o PR. Duas ferramentas, dois resultados: cobertura de scanner também se valida
 - `--ignore-unfixed` e `--exit-code 1 --severity CRITICAL` para quebrar o pipeline só no que é acionável
 - Relembrar o pipeline real: [`.github/workflows/appsec.yml`](.github/workflows/appsec.yml) (Trivy no CI + DefectDojo)
 
