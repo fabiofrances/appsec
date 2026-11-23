@@ -1,0 +1,12 @@
+# Mantém as actions fixadas por SHA atualizadas (abre PR com o SHA novo e a tag no comentário).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    # espera a versão nova amadurecer antes de propor (reduz o risco de pegar release comprometida)
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: ci

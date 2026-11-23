@@ -1,5 +1,6 @@
 # syntax=docker/dockerfile:1
-# Lab 04 — Frontend endurecido (compare com frontend/Dockerfile, onde o nginx roda como root)
+# Lab 04 — Frontend endurecido. O frontend/Dockerfile já roda sem root (correção pedida pelo gate
+# de SAST do pipeline); aqui somam-se os controles de runtime do compose.hardening.yml.
 # Build (usa um "named context" do BuildKit para pegar o nginx.conf deste lab):
 #   docker build -f hands-on/lab04-hardening/Dockerfile \
 #     --build-context lab=hands-on/lab04-hardening \

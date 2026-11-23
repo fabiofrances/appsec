@@ -741,8 +741,9 @@ lab(s, "make lab-sbom")
 # ═════════════════════════════════════════════════════════════════════════════
 # 19 — Hardening
 # ═════════════════════════════════════════════════════════════════════════════
-s = new_slide("O frontend/Dockerfile deste repo roda nginx como root na porta 80. No lab04 vira "
-              "nginx-unprivileged na 8080, rootfs read-only, cap_drop ALL, no-new-privileges, limites. "
+s = new_slide("O frontend/Dockerfile rodava nginx como root na porta 80 até o gate de SAST (Semgrep, "
+              "missing-user) reprovar o build; a correção virou nginx-unprivileged na 8080. O lab04 vai além: "
+              "rootfs read-only, cap_drop ALL, no-new-privileges, limites. "
               "Demonstrar: docker exec id, touch /etc/x falha.")
 title(s, "Hardening do runtime", "Bloco 6 · 10 min")
 table(s, 0.6, 1.75, [4.4, 3.5, 4.2], [

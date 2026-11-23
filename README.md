@@ -363,7 +363,9 @@ docker compose up -d
 | Prometheus metrics | http://localhost:9464/metrics | — |
 | Prometheus | http://localhost:9090 | — |
 | Jaeger UI | http://localhost:16686 | — |
-| DefectDojo | http://localhost:8081 | admin / admin@dojo123 |
+| DefectDojo | http://localhost:8081 | admin / admin@dojo123 ⚠️ |
+
+> ⚠️ **Somente laboratório local.** As credenciais acima e as do `docker-compose.yml` (`DD_ADMIN_PASSWORD`, `DD_SECRET_KEY`, senhas do Postgres) são públicas de propósito, para a demo. Não reutilize em nenhum outro ambiente; fora do laboratório, use segredos gerados e um cofre (GitHub Secrets, Vault, etc.).
 
 ### Serviços DefectDojo
 
