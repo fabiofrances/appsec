@@ -22,7 +22,7 @@ services:
       target: production
     image: appsec-bmi-frontend:latest
     ports:
-      - "80:80"
+      - "80:8080" # nginx sem root escuta na 8080
     depends_on:
       - backend
     networks:
@@ -50,6 +50,7 @@ services:
     networks:
       - appsec
 
+  # Senhas e DD_SECRET_KEY abaixo: SOMENTE laboratório local, públicas de propósito (ver README).
   # ── DefectDojo stack ────────────────────────────────────────────────────
   postgres:
     image: postgres:16-alpine

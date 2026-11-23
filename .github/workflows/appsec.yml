@@ -6,10 +6,19 @@ on:
   pull_request:
     branches: [main, master]
 
-env:
-  DEFECTDOJO_URL: ${{ secrets.DEFECTDOJO_URL }}
-  DEFECTDOJO_TOKEN: ${{ secrets.DEFECTDOJO_TOKEN }}
-  DEFECTDOJO_PRODUCT_ID: ${{ secrets.DEFECTDOJO_PRODUCT_ID }}
+# GITHUB_TOKEN só com leitura; cada job pede o que precisa a mais.
+permissions:
+  contents: read
+
+# Actions fixadas por SHA (supply chain): a tag fica no comentário e o Dependabot
+# (.github/dependabot.yml) abre PR quando sair versão nova.
+#
+# Quality gates: cada job primeiro gera e publica o relatório (e importa no
+# DefectDojo) e só no último passo reprova o pipeline:
+#   SAST       Semgrep        achado de severidade ERROR
+#   SCA        npm audit      HIGH ou CRITICAL em dependência de produção
+#   Container  Trivy          HIGH ou CRITICAL com correção disponível
+#   DAST       OWASP ZAP      regra marcada como FAIL em infra/zap/zap-rules.tsv
 
 jobs:
   # ── Unit & Integration Tests ──────────────────────────────────────────────
@@ -17,9 +26,9 @@ jobs:
     name: Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: npm
@@ -29,55 +38,125 @@ jobs:
 
       - name: Backend tests
         working-directory: backend
-        run: npm ci && npm test -- --passWithNoTests
+        run: npm ci && npm test -- --passWithNoTests && npm run test:e2e
 
       - name: Frontend tests
         working-directory: frontend
         run: npm ci && npm run test:unit -- --run
 
-  # ── SCA: OWASP Dependency Check ──────────────────────────────────────────
+  # ── SAST: Semgrep ─────────────────────────────────────────────────────────
+  sast:
+    name: SAST (Semgrep)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write # publica o SARIF na aba Security > Code scanning
+    container:
+      image: semgrep/semgrep:1.185.0
+    env:
+      DEFECTDOJO_URL: ${{ secrets.DEFECTDOJO_URL }}
+      SEMGREP_RULES: --config p/typescript --config p/nodejs --config p/owasp-top-ten
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Semgrep scan (relatório)
+        run: |
+          mkdir -p reports
+          semgrep scan $SEMGREP_RULES --metrics=off \
+            --sarif-output=reports/semgrep.sarif --json-output=reports/semgrep.json
+
+      - name: Upload SARIF (GitHub Code scanning)
+        uses: github/codeql-action/upload-sarif@d2aacf54c2fbc910db8d7ec338fdb54ea48c692d # v3
+        with:
+          sarif_file: reports/semgrep.sarif
+          category: semgrep
+
+      - name: Upload Semgrep report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: semgrep-report
+          path: reports/semgrep.*
+
+      - name: Import to DefectDojo
+        if: env.DEFECTDOJO_URL != ''
+        env:
+          DEFECTDOJO_TOKEN: ${{ secrets.DEFECTDOJO_TOKEN }}
+          DEFECTDOJO_PRODUCT_ID: ${{ secrets.DEFECTDOJO_PRODUCT_ID }}
+        run: |
+          curl -s -X POST "$DEFECTDOJO_URL/api/v2/import-scan/" \
+            -H "Authorization: Token $DEFECTDOJO_TOKEN" \
+            -F "scan_type=Semgrep JSON Report" \
+            -F "product_id=$DEFECTDOJO_PRODUCT_ID" \
+            -F "engagement_name=CI - $(date +%Y-%m-%d)" \
+            -F "file=@reports/semgrep.json" \
+            -F "active=true" \
+            -F "verified=false"
+
+      - name: Gate - achados de severidade ERROR
+        run: semgrep scan $SEMGREP_RULES --metrics=off --severity ERROR --error
+
+  # ── SCA: OWASP Dependency Check + npm audit ───────────────────────────────
   dependency-check:
     name: Dependency Check (SCA)
     runs-on: ubuntu-latest
     needs: test
+    env:
+      DEFECTDOJO_URL: ${{ secrets.DEFECTDOJO_URL }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Run OWASP Dependency Check
-        uses: dependency-check/Dependency-Check_Action@main
+        uses: dependency-check/Dependency-Check_Action@75ba02d6183445fe0761d26e836bde58b1560600 # 1.1.0
         with:
           project: bmi-appsec
           path: .
-          format: JSON
+          format: ALL # JSON/HTML para leitura, XML para o DefectDojo
           args: >
             --enableRetired
             --out reports/dependency-check
 
       - name: Upload report artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: dependency-check-report
-          path: reports/dependency-check/dependency-check-report.json
+          path: |
+            reports/dependency-check/dependency-check-report.json
+            reports/dependency-check/dependency-check-report.html
+            reports/dependency-check/dependency-check-report.xml
 
       - name: Import to DefectDojo
         if: env.DEFECTDOJO_URL != ''
+        env:
+          DEFECTDOJO_TOKEN: ${{ secrets.DEFECTDOJO_TOKEN }}
+          DEFECTDOJO_PRODUCT_ID: ${{ secrets.DEFECTDOJO_PRODUCT_ID }}
         run: |
           curl -s -X POST "$DEFECTDOJO_URL/api/v2/import-scan/" \
             -H "Authorization: Token $DEFECTDOJO_TOKEN" \
             -F "scan_type=Dependency Check Scan" \
             -F "product_id=$DEFECTDOJO_PRODUCT_ID" \
             -F "engagement_name=CI - $(date +%Y-%m-%d)" \
-            -F "file=@reports/dependency-check/dependency-check-report.json" \
+            -F "file=@reports/dependency-check/dependency-check-report.xml" \
             -F "active=true" \
             -F "verified=false"
+
+      # O Dependency Check lê também as dependências de desenvolvimento e tem falso
+      # positivo por CPE: fica como relatório. O gate olha só o que vai para produção.
+      - name: Gate - HIGH/CRITICAL em dependências de produção
+        run: |
+          for app in backend frontend; do
+            echo "── $app"
+            (cd "$app" && npm audit --omit=dev --audit-level=high)
+          done
 
   # ── Container Scanning: Trivy ─────────────────────────────────────────────
   trivy:
     name: Trivy (Container Scan)
     runs-on: ubuntu-latest
     needs: test
+    env:
+      DEFECTDOJO_URL: ${{ secrets.DEFECTDOJO_URL }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Build backend image
         run: docker build -t bmi-backend:ci --target production ./backend
@@ -85,61 +164,75 @@ jobs:
       - name: Build frontend image
         run: docker build -t bmi-frontend:ci --target production ./frontend
 
-      - name: Trivy scan - backend
-        uses: aquasecurity/trivy-action@master
+      - name: Trivy scan - backend (relatório)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: bmi-backend:ci
           format: json
           output: reports/trivy-backend.json
           exit-code: 0
-          severity: CRITICAL,HIGH
+          severity: CRITICAL,HIGH,MEDIUM,LOW
 
-      - name: Trivy scan - frontend
-        uses: aquasecurity/trivy-action@master
+      - name: Trivy scan - frontend (relatório)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: bmi-frontend:ci
           format: json
           output: reports/trivy-frontend.json
           exit-code: 0
-          severity: CRITICAL,HIGH
+          severity: CRITICAL,HIGH,MEDIUM,LOW
 
       - name: Upload Trivy reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: trivy-reports
           path: reports/trivy-*.json
 
-      - name: Import backend scan to DefectDojo
+      - name: Import scans to DefectDojo
         if: env.DEFECTDOJO_URL != ''
+        env:
+          DEFECTDOJO_TOKEN: ${{ secrets.DEFECTDOJO_TOKEN }}
+          DEFECTDOJO_PRODUCT_ID: ${{ secrets.DEFECTDOJO_PRODUCT_ID }}
         run: |
-          curl -s -X POST "$DEFECTDOJO_URL/api/v2/import-scan/" \
-            -H "Authorization: Token $DEFECTDOJO_TOKEN" \
-            -F "scan_type=Trivy Scan" \
-            -F "product_id=$DEFECTDOJO_PRODUCT_ID" \
-            -F "engagement_name=CI - $(date +%Y-%m-%d)" \
-            -F "file=@reports/trivy-backend.json" \
-            -F "active=true" \
-            -F "verified=false"
+          for app in backend frontend; do
+            curl -s -X POST "$DEFECTDOJO_URL/api/v2/import-scan/" \
+              -H "Authorization: Token $DEFECTDOJO_TOKEN" \
+              -F "scan_type=Trivy Scan" \
+              -F "product_id=$DEFECTDOJO_PRODUCT_ID" \
+              -F "engagement_name=CI - $(date +%Y-%m-%d)" \
+              -F "file=@reports/trivy-$app.json" \
+              -F "active=true" \
+              -F "verified=false"
+          done
 
-      - name: Import frontend scan to DefectDojo
-        if: env.DEFECTDOJO_URL != ''
-        run: |
-          curl -s -X POST "$DEFECTDOJO_URL/api/v2/import-scan/" \
-            -H "Authorization: Token $DEFECTDOJO_TOKEN" \
-            -F "scan_type=Trivy Scan" \
-            -F "product_id=$DEFECTDOJO_PRODUCT_ID" \
-            -F "engagement_name=CI - $(date +%Y-%m-%d)" \
-            -F "file=@reports/trivy-frontend.json" \
-            -F "active=true" \
-            -F "verified=false"
+      # ignore-unfixed: CVE sem correção publicada não bloqueia (não há o que fazer);
+      # ela continua no relatório e no DefectDojo para acompanhamento.
+      - name: Gate - backend
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: bmi-backend:ci
+          exit-code: 1
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+
+      - name: Gate - frontend
+        if: success() || failure() # roda mesmo se o gate do backend reprovar
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: bmi-frontend:ci
+          exit-code: 1
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
 
   # ── DAST: OWASP ZAP ───────────────────────────────────────────────────────
   zap:
     name: OWASP ZAP (DAST)
     runs-on: ubuntu-latest
     needs: test
+    env:
+      DEFECTDOJO_URL: ${{ secrets.DEFECTDOJO_URL }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Start application stack
         # só a app (o DAST não precisa da stack do DefectDojo)
@@ -152,8 +245,9 @@ jobs:
           done
           curl -sf http://localhost/api/health
 
+      # Gate: -I não reprova por WARN; reprova só regra marcada como FAIL no zap-rules.tsv.
       - name: Run ZAP full scan
-        uses: zaproxy/action-full-scan@v0.13.0
+        uses: zaproxy/action-full-scan@3c58388149901b9a03b7718852c5ba889646c27c # v0.13.0
         with:
           target: http://localhost
           rules_file_name: infra/zap/zap-rules.tsv
@@ -161,10 +255,10 @@ jobs:
           # só acrescentamos o XML (exigido pelo DefectDojo)
           cmd_options: '-x report_xml.xml -I'
           allow_issue_writing: false
-          fail_action: false
+          fail_action: true
 
       - name: Collect ZAP reports
-        if: always()
+        if: success() || failure()
         run: |
           mkdir -p reports
           for ext in json html xml; do
@@ -173,16 +267,26 @@ jobs:
           ls -la reports/
 
       - name: Upload ZAP report
-        if: always()
-        uses: actions/upload-artifact@v4
+        if: success() || failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: zap-report
           path: reports/zap-report.*
 
       - name: Import to DefectDojo
-        if: env.DEFECTDOJO_URL != ''
+        if: (success() || failure()) && env.DEFECTDOJO_URL != ''
+        env:
+          DEFECTDOJO_TOKEN: ${{ secrets.DEFECTDOJO_TOKEN }}
+          DEFECTDOJO_PRODUCT_ID: ${{ secrets.DEFECTDOJO_PRODUCT_ID }}
         run: |
-          curl -s -X POST "$DEFECTDOJO_URL/api/v2/import-scan/"             -H "Authorization: Token $DEFECTDOJO_TOKEN"             -F "scan_type=ZAP Scan"             -F "product_id=$DEFECTDOJO_PRODUCT_ID"             -F "engagement_name=CI - $(date +%Y-%m-%d)"             -F "file=@reports/zap-report.xml"             -F "active=true"             -F "verified=false"
+          curl -s -X POST "$DEFECTDOJO_URL/api/v2/import-scan/" \
+            -H "Authorization: Token $DEFECTDOJO_TOKEN" \
+            -F "scan_type=ZAP Scan" \
+            -F "product_id=$DEFECTDOJO_PRODUCT_ID" \
+            -F "engagement_name=CI - $(date +%Y-%m-%d)" \
+            -F "file=@reports/zap-report.xml" \
+            -F "active=true" \
+            -F "verified=false"
 
       - name: Tear down stack
         if: always()

@@ -1,0 +1,6 @@
+# Antipadrões propositais dos labs (o lab01 existe para ser comparado com o multi-stage)
+hands-on/lab01-single-stage/
+# Dependências e artefatos de build
+node_modules/
+dist/
+reports/

@@ -352,8 +352,10 @@ make lab-sbom      # SBOM CycloneDX
 
 ## Bloco 6 — Hardening do runtime (10 min)
 
-### O problema real deste repositório
-`frontend/Dockerfile` usa `nginx:1.27-alpine`: o nginx sobe como **root**, ouvindo na porta 80, sem healthcheck.
+### O problema real deste repositório (e como o pipeline pegou)
+O `frontend/Dockerfile` usava `nginx:1.27-alpine`: o nginx subia como **root**, na porta 80, sem healthcheck. Quando o pipeline ganhou o **gate de SAST** (Semgrep, regra `missing-user`), o build passou a ser reprovado. A correção foi a mesma do lab04: `nginxinc/nginx-unprivileged:1.31-alpine` na 8080, `USER 101` e `HEALTHCHECK` (o compose publica `80:8080`). O lab04 vai além e aplica os controles de runtime da tabela abaixo.
+
+> Gancho: "Ninguém lembrou de revisar o Dockerfile. O gate lembrou."
 
 ### Hands-on
 ```bash
