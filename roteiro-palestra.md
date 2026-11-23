@@ -202,7 +202,7 @@ git push
        │
        ├──► Testes unitários (Jest / Vitest)
        │
-       ├──► SAST — SonarQube (análise estática do código)
+       ├──► SAST — Semgrep (análise estática do código, SARIF no Code scanning)
        │
        ├──► SCA  — OWASP Dependency Check (CVEs nas libs)
        │
@@ -396,7 +396,7 @@ Módulo 1 — Fundamentos de Segurança
   └── Boas práticas de desenvolvimento seguro
 
 Módulo 2 — SAST e Qualidade de Código
-  ├── SonarQube: configuração, regras, quality gates
+  ├── Semgrep (usado no pipeline deste projeto) e SonarQube: regras, quality gates
   └── Análise de código TypeScript / Java / Python
 
 Módulo 3 — SCA e Gestão de Dependências

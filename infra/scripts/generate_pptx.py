@@ -118,7 +118,7 @@ for tech, color in [("NestJS", RED), ("Vue.js", GREEN), ("Docker", BLUE),
     px += len(tech) * 0.115 + 0.55
 
 box(s1, 0, 7.1, 13.33, 0.4, BLUE)
-txt(s1, "github.com/questores/appsec-bmi", 4.0, 7.12, 9.0, 0.35,
+txt(s1, "github.com/fabiofrances/appsec", 4.0, 7.12, 9.0, 0.35,
     size=13, color=WHITE, align=PP_ALIGN.CENTER)
 
 
@@ -390,7 +390,7 @@ s9 = slide()
 header(s9, "Etapa 4 — AppSec", "Ferramentas de segurança integradas ao pipeline", RED)
 
 scan_tools = [
-    ("🔍", "SonarQube",  "SAST",           "Análise estática\ndo código fonte",            RGBColor(0xCB, 0x6E, 0x17)),
+    ("🔍", "Semgrep",    "SAST",           "Análise estática\ndo código fonte",            RGBColor(0xCB, 0x6E, 0x17)),
     ("📦", "Dep. Check", "SCA",            "Dependências\nvulneráveis (NVD)",              ORANGE),
     ("🐳", "Trivy",      "Container Scan", "CVEs nas\nimagens Docker",                     BLUE),
     ("⚡", "OWASP ZAP", "DAST",           "Vulnerabilidades\nHTTP em runtime",             RED),
@@ -421,37 +421,36 @@ txt(s9, "Centraliza, prioriza e gerencia todos os findings", 3.4, 6.62, 6.5, 0.3
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Slide 10 — SonarQube (SAST)
+# Slide 10 — Semgrep (SAST)
 # ═══════════════════════════════════════════════════════════════════════════════
 s10 = slide()
-header(s10, "SonarQube — SAST",
-       "Static Application Security Testing — análise do código fonte", RGBColor(0xCB, 0x6E, 0x17))
-
-SONAR = RGBColor(0xCB, 0x6E, 0x17)
+SAST_COLOR = RGBColor(0xCB, 0x6E, 0x17)
+header(s10, "Semgrep — SAST",
+       "Static Application Security Testing — análise do código fonte", SAST_COLOR)
 
 box(s10, 0.4, 1.35, 5.8, 5.8, BG2)
-txt(s10, "🔍  O que analisa?", 0.65, 1.45, 5.3, 0.5, size=18, bold=True, color=SONAR)
+txt(s10, "🔍  O que analisa?", 0.65, 1.45, 5.3, 0.5, size=18, bold=True, color=SAST_COLOR)
 
 for i, item in enumerate([
-    "🐛  Bugs e code smells no código fonte",
-    "💉  Vulnerabilidades de segurança (OWASP)",
-    "🔑  Hardcoded secrets e credenciais",
-    "📊  Cobertura de testes (integra Jest/Vitest)",
-    "🔁  Código duplicado e complexidade",
-    "📋  Violações de boas práticas",
+    "💉  Injeção, XSS e padrões inseguros (OWASP)",
+    "🟦  TypeScript / Node.js (NestJS e Vue)",
+    "🐳  Dockerfiles: container sem USER (root)",
+    "⚙️  Workflows do GitHub Actions e nginx",
+    "📏  Regras prontas: p/typescript, p/nodejs,",
+    "      p/owasp-top-ten (sem servidor, roda no job)",
 ]):
     txt(s10, item, 0.65, 2.1 + i * 0.65, 5.3, 0.55, size=14, color=WHITE)
 
 # Quality Gate
 box(s10, 6.5, 1.35, 6.5, 3.2, BG2)
-txt(s10, "🚦  Quality Gate", 6.75, 1.45, 6.0, 0.5, size=18, bold=True, color=SONAR)
-txt(s10, "Bloqueia o merge/deploy se os critérios\nde qualidade e segurança não forem atingidos:",
+txt(s10, "🚦  Quality Gate", 6.75, 1.45, 6.0, 0.5, size=18, bold=True, color=SAST_COLOR)
+txt(s10, "Relatório completo primeiro; o último passo\ndo job reprova o pipeline:",
     6.75, 2.0, 6.1, 0.75, size=13, color=LGRAY)
 for i, (item, color) in enumerate([
-    ("0 vulnerabilidades novas (blocker/critical)", RED),
-    ("Cobertura de testes >= 80%",                  GREEN),
-    ("0 bugs e code smells críticos novos",          ORANGE),
-    ("Duplicacao < 3%",                             LGRAY),
+    ("Achado de severidade ERROR = job reprovado", RED),
+    ("WARNING fica no relatório para triagem",     ORANGE),
+    ("Achou: frontend rodando como root (corrigido)", GREEN),
+    ("Alternativa: SonarQube (qualidade + cobertura)", LGRAY),
 ]):
     txt(s10, f"  • {item}", 6.75, 2.82 + i * 0.44, 6.1, 0.38, size=13, color=color)
 
@@ -459,10 +458,10 @@ for i, (item, color) in enumerate([
 box(s10, 6.5, 4.75, 6.5, 2.4, BG2)
 txt(s10, "🔄  Onde entra no pipeline?", 6.75, 4.85, 6.0, 0.5, size=16, bold=True, color=WHITE)
 for i, (num, step, color) in enumerate([
-    ("1", "Developer faz push para o repositório",     WHITE),
-    ("2", "GitHub Actions executa sonar-scanner",      WHITE),
-    ("3", "SonarQube analisa e calcula Quality Gate",  WHITE),
-    ("4", "PASS = merge liberado / FAIL = bloqueado",  GREEN),
+    ("1", "Push ou PR dispara o GitHub Actions",          WHITE),
+    ("2", "semgrep scan gera SARIF e JSON",               WHITE),
+    ("3", "SARIF no Code scanning, JSON no DefectDojo",   WHITE),
+    ("4", "ERROR = merge bloqueado (check obrigatório)",  GREEN),
 ]):
     pill(s10, num, 6.65, 5.42 + i * 0.46, DGRAY, size=11)
     txt(s10, step, 7.15, 5.42 + i * 0.46, 5.6, 0.38, size=13, color=color)
@@ -718,13 +717,13 @@ for i, item in enumerate([
     txt(s16, item, 2.3, 3.5 + i * 0.58, 8.8, 0.5, size=15, color=WHITE)
 
 box(s16, 0, 7.1, 13.33, 0.4, GREEN)
-txt(s16, "🙋  Perguntas?  •  github.com/questores/appsec-bmi",
+txt(s16, "🙋  Perguntas?  •  github.com/fabiofrances/appsec",
     0.5, 7.12, 12.33, 0.35, size=15, bold=True, align=PP_ALIGN.CENTER)
 
 
 # ─── Save ─────────────────────────────────────────────────────────────────────
 out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..",
-                   "appsec-palestra.pptx")
+                   "reports", "appsec-palestra.pptx")
 out = os.path.normpath(out)
 prs.save(out)
 print(f"Salvo: {out}")
