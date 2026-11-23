@@ -384,31 +384,34 @@ for i, (fname, desc) in enumerate([
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Slide 9 — AppSec Overview (SAST + SCA + Container + DAST → DefectDojo)
+# Slide 9 — AppSec Overview (SAST + Secrets + SCA + Container + DAST → DefectDojo)
 # ═══════════════════════════════════════════════════════════════════════════════
 s9 = slide()
 header(s9, "Etapa 4 — AppSec", "Ferramentas de segurança integradas ao pipeline", RED)
 
 scan_tools = [
     ("🔍", "Semgrep",    "SAST",           "Análise estática\ndo código fonte",            RGBColor(0xCB, 0x6E, 0x17)),
+    ("🔑", "Gitleaks",   "Secrets",        "Segredos em todo\no histórico do git",          YELLOW),
     ("📦", "Dep. Check", "SCA",            "Dependências\nvulneráveis (NVD)",              ORANGE),
     ("🐳", "Trivy",      "Container Scan", "CVEs nas\nimagens Docker",                     BLUE),
     ("⚡", "OWASP ZAP", "DAST",           "Vulnerabilidades\nHTTP em runtime",             RED),
 ]
+CARD_W, CARD_STEP = 2.4, 2.55
 for i, (icon, name, type_, desc, color) in enumerate(scan_tools):
-    x = 0.3 + i * 3.22
-    box(s9, x, 1.45, 3.05, 4.1, BG2)
-    box(s9, x, 1.45, 3.05, 0.06, color)
-    txt(s9, icon,  x,        1.55, 3.05, 1.05, size=46, align=PP_ALIGN.CENTER)
-    txt(s9, name,  x,        2.6,  3.05, 0.52, size=18, bold=True, align=PP_ALIGN.CENTER)
-    pill(s9, type_, x + 0.45, 3.2, color, size=11)
-    txt(s9, desc,  x + 0.1,  3.72, 2.85, 1.0, size=12, color=LGRAY, align=PP_ALIGN.CENTER)
-    if i < 3:
-        txt(s9, "→", x + 3.0, 3.0, 0.25, 0.42, size=18, color=LGRAY, align=PP_ALIGN.CENTER)
+    x = 0.3 + i * CARD_STEP
+    box(s9, x, 1.45, CARD_W, 4.1, BG2)
+    box(s9, x, 1.45, CARD_W, 0.06, color)
+    txt(s9, icon,  x,        1.55, CARD_W, 1.05, size=46, align=PP_ALIGN.CENTER)
+    txt(s9, name,  x,        2.6,  CARD_W, 0.52, size=18, bold=True, align=PP_ALIGN.CENTER)
+    pill_w = max(len(type_) * 0.115 + 0.35, 1.0)  # mesma largura que pill() calcula
+    pill(s9, type_, x + (CARD_W - pill_w) / 2, 3.2, color, fg=BG if color == YELLOW else WHITE, size=11)
+    txt(s9, desc,  x + 0.1,  3.72, CARD_W - 0.2, 1.0, size=12, color=LGRAY, align=PP_ALIGN.CENTER)
+    if i < len(scan_tools) - 1:
+        txt(s9, "→", x + CARD_W - 0.05, 3.0, 0.25, 0.42, size=16, color=LGRAY, align=PP_ALIGN.CENTER)
 
 # Arrows pointing down to DefectDojo
-for i in range(4):
-    x = 0.3 + i * 3.22 + 1.3
+for i in range(len(scan_tools)):
+    x = 0.3 + i * CARD_STEP + CARD_W / 2 - 0.22
     txt(s9, "↓", x, 5.6, 0.45, 0.45, size=18, color=LGRAY, align=PP_ALIGN.CENTER)
 
 # DefectDojo as aggregator below
