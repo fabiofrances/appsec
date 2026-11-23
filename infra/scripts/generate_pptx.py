@@ -118,7 +118,7 @@ for tech, color in [("NestJS", RED), ("Vue.js", GREEN), ("Docker", BLUE),
     px += len(tech) * 0.115 + 0.55
 
 box(s1, 0, 7.1, 13.33, 0.4, BLUE)
-txt(s1, "github.com/questores/appsec-bmi", 4.0, 7.12, 9.0, 0.35,
+txt(s1, "github.com/fabiofrances/appsec", 4.0, 7.12, 9.0, 0.35,
     size=13, color=WHITE, align=PP_ALIGN.CENTER)
 
 
@@ -717,7 +717,7 @@ for i, item in enumerate([
     txt(s16, item, 2.3, 3.5 + i * 0.58, 8.8, 0.5, size=15, color=WHITE)
 
 box(s16, 0, 7.1, 13.33, 0.4, GREEN)
-txt(s16, "🙋  Perguntas?  •  github.com/questores/appsec-bmi",
+txt(s16, "🙋  Perguntas?  •  github.com/fabiofrances/appsec",
     0.5, 7.12, 12.33, 0.35, size=15, bold=True, align=PP_ALIGN.CENTER)
 
 
